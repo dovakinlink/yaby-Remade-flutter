@@ -1,0 +1,40 @@
+你是 Flutter 登录页动画的实现代理。目标：复刻 Web 版左侧面板 `AnimatedMedicalBackground` 的医疗科技感动画背景，用于 Flutter APP 登录页面。
+
+整体思路
+1. 构建一个可复用的 `AnimatedMedicalBackground` StatefulWidget，内部使用 `AnimationController` + `TickerProviderStateMixin` 驱动动画，每帧调用 `setState` 或使用 `AnimatedBuilder` / `ListenableBuilder` 刷新。
+2. 用 `CustomPaint` + `CustomPainter` 在 Canvas 上绘制所有元素，Painter 读取 Widget 传入的配置（如 `baseColor`、`density`、`showHelix`）。
+3. Widget 默认填满父容器，保持 `BoxFit.cover` 效果；在登录页中把它放在左侧 Expanded 容器后面（Stack 的底层）。
+
+背景层次
+- 线性渐变：按照 Web 版逻辑，从左上到右下绘制 `#1b908b -> #0f5f5b` 的线性渐变，可用 `ui.Gradient.linear`。
+- 辐射高光：在 25% 宽度、30% 高度的位置叠加一个大半径的辐射渐变，中心颜色 `#58e0d9`，外圈透明 (`Colors.transparent`)，用 `ui.Gradient.radial` 叠加到背景上，营造光晕。
+
+粒子系统（分子节点 + 连线）
+- 粒子数量与画布面积成比例：数量 = max(30, floor(area / 10000 * density))，`density` 缺省 1.4。初始化时随机位置与半径（1.4–3.6 px）。
+- 速度向量：每个粒子有 `vx`、`vy`（-0.3~0.3 区间即可，注意 DPR 与帧率），逐帧更新位置；触碰边界时镜像反弹。
+- 连线：遍历两两粒子，若距离 < 130 px，按距离线性衰减透明度：alpha = 1 - d / 130；连线颜色使用 `baseColor` 的 0.08–0.33 alpha，线宽 ~1.2。
+- 节点绘制：使用 `Paint()..color = baseColor.withOpacity(0.78)` 之类的值绘制小圆点。
+- 建议将粒子状态（位置、速度、半径）存储在 Widget State 中的 List，下次帧复用，避免频繁分配。
+
+DNA 双螺旋叠加（可选）
+- 当 `showHelix == true` 时绘制 36 条横杆。计算：
+  * `midX = width * 0.35`
+  * `amp = min(60, height * 0.12)`
+  * `gapY = height / (helixCols + 1)`
+  * 对每个 i：`phase = time + i * 0.35`，左右位移 `dx = sin(phase) * amp`
+  * 左右点 `(midX - dx, y)`、`(midX + dx, y)` 用 1.6px 线连起来；端点画 2.6px 小圆。
+- `time` 随动画逐帧累加（比如 `time += controller.lastElapsedDuration!.inMilliseconds / 1000`）。
+
+实现提示
+- 创建一个 `Ticker` 驱动的 `AnimationController(vsync: this, duration: const Duration(seconds: 10))` 并设置 `..repeat()`，在 `addListener` 中更新粒子并调用 `setState`。
+- 为了性能，可把粒子更新逻辑与绘制逻辑分离：更新在 State 中，绘制只读取已经更新的数据。
+- 使用 `MediaQuery.of(context).devicePixelRatio` 估算 DPR；粒子逻辑走逻辑坐标，Canvas 会自动处理像素密度，无需手动放大。
+- 提供可调参数：`baseColor`（默认 `Color(0xFF36CAC4)`）、`density`、`showHelix`，保持与 React 版一致的 API。
+- 在登录页面中通过 `Stack(children: [AnimatedMedicalBackground(...), content])` 方式叠放；为内容部分添加 `Container(color: Colors.black.withOpacity(0.0))` 以防挡住触摸。
+- 保持动画资源消耗可控：在 `dispose` 中 `controller.dispose()`；在 Widget 不可见时可暂停（配合 `VisibilityDetector` / `WidgetsBindingObserver`）。
+
+交付标准
+- 动画在 60fps 下流畅运行；
+- 视觉层级（渐变、粒子、连线、DNA 梯、亮点）与 Web 版一致；
+- 移动端横屏 / 竖屏尺寸变化时，粒子会重新安排并填满画布；
+- 暴露可配置项，便于在不同主题背景下复用。
