@@ -4,20 +4,23 @@ class AppColors {
   static const brandGreen = Color(0xFF36CAC4);
   static const neutralText = Color(0xFF0F172A);
   static const fieldBackground = Color(0xFFF4F5F6);
-  static const accentBlue = Color(0xFF047CFF);
+  // static const accentBlue = Color(0xFF047CFF);
+  static const accentBlue = Color(0xFF36CAC4);
+  static const fieldBorder = Color(0xFFCBD5E1);
 }
 
 class AppTheme {
   static ThemeData get lightTheme {
     final base = ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.brandGreen,
-        brightness: Brightness.light,
-      ).copyWith(
-        primary: AppColors.brandGreen,
-        secondary: AppColors.accentBlue,
-      ),
+      colorScheme:
+          ColorScheme.fromSeed(
+            seedColor: AppColors.brandGreen,
+            brightness: Brightness.light,
+          ).copyWith(
+            primary: AppColors.brandGreen,
+            secondary: AppColors.accentBlue,
+          ),
       scaffoldBackgroundColor: Colors.white,
       fontFamily: 'SF Pro Display',
     );
@@ -27,24 +30,35 @@ class AppTheme {
         bodyColor: AppColors.neutralText,
         displayColor: AppColors.neutralText,
       ),
-      inputDecorationTheme: const InputDecorationTheme(
+      inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.fieldBackground,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: Colors.transparent),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.fieldBorder, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: Colors.transparent),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.fieldBorder, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: AppColors.brandGreen, width: 1.5),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.brandGreen, width: 1.5),
         ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        hintStyle: TextStyle(color: Color(0xFF9CA3AF)),
-        labelStyle: TextStyle(fontWeight: FontWeight.w600),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.red.shade400, width: 1.2),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 18,
+        ),
+        hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
+        labelStyle: const TextStyle(fontWeight: FontWeight.w600),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

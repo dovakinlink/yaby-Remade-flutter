@@ -18,17 +18,17 @@ class LoginFormProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> submit({required Future<void> Function(Map<String, String>) onSubmit}) async {
+  Future<void> submit({
+    required Future<void> Function(Map<String, String>) onSubmit,
+  }) async {
     if (isSubmitting) return;
     isSubmitting = true;
     notifyListeners();
     try {
-      await onSubmit(
-        {
-          'phone': phoneController.text,
-          'password': passwordController.text,
-        },
-      );
+      await onSubmit({
+        'username': phoneController.text,
+        'password': passwordController.text,
+      });
     } finally {
       isSubmitting = false;
       notifyListeners();

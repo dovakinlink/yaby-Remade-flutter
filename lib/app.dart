@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
+import 'package:yabai_app/features/auth/data/repositories/auth_repository.dart';
+import 'package:yabai_app/features/auth/providers/auth_session_provider.dart';
 import 'package:yabai_app/features/auth/providers/login_form_provider.dart';
 import 'package:yabai_app/features/auth/presentation/pages/login_page.dart';
 import 'package:yabai_app/features/home/presentation/pages/home_page.dart';
@@ -42,6 +44,10 @@ class _YabaiAppState extends State<YabaiApp> {
     return MultiProvider(
       providers: [
         Provider(create: (_) => ApiClient()),
+        Provider(
+          create: (context) => AuthRepository(context.read<ApiClient>()),
+        ),
+        ChangeNotifierProvider(create: (_) => AuthSessionProvider()),
         ChangeNotifierProvider(create: (_) => LoginFormProvider()),
       ],
       child: MaterialApp.router(

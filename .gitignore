@@ -1,0 +1,12 @@
+# Flutter的忽略文件
+flutter/
+.dart_tool/
+.pub/
+build/
+.idea/
+.vscode/
+.flutter-plugins-dependencies
+.flutter-plugins
+.metadata
+.flutter-plugins-dependencies
+.flutter-plugins
