@@ -22,12 +22,16 @@ class HomeBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.darkCardBackground : Colors.white,
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+            color: isDark 
+                ? Colors.black.withValues(alpha: 0.3)
+                : const Color(0xFF0F172A).withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, -6),
           ),
@@ -37,11 +41,19 @@ class HomeBottomNav extends StatelessWidget {
         currentIndex: currentIndex,
         onTap: onTap,
         type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? AppColors.darkCardBackground : Colors.white,
         elevation: 0,
         selectedItemColor: AppColors.brandGreen,
-        unselectedItemColor: const Color(0xFF94A3B8),
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+        unselectedItemColor: isDark 
+            ? AppColors.darkSecondaryText 
+            : const Color(0xFF94A3B8),
+        selectedLabelStyle: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: isDark ? AppColors.darkNeutralText : null,
+        ),
+        unselectedLabelStyle: TextStyle(
+          color: isDark ? AppColors.darkSecondaryText : null,
+        ),
         showUnselectedLabels: true,
         items: _items
             .map(
@@ -49,7 +61,9 @@ class HomeBottomNav extends StatelessWidget {
                 label: item.label,
                 icon: _NavIcon(
                   asset: item.asset,
-                  color: const Color(0xFF94A3B8),
+                  color: isDark 
+                      ? AppColors.darkSecondaryText 
+                      : const Color(0xFF94A3B8),
                 ),
                 activeIcon: _NavIcon(
                   asset: item.asset,

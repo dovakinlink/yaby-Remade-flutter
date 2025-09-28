@@ -30,10 +30,11 @@ class _AnnouncementFeed extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: isDark ? AppColors.darkCardBackground : Colors.white,
+        borderRadius: BorderRadius.circular(0),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -54,7 +55,7 @@ class _AnnouncementFeed extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.brandGreen,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(0),
                 ),
                 child: Text(
                   '通知公告',
@@ -104,10 +105,11 @@ class _TaskFeed extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: isDark ? AppColors.darkCardBackground : Colors.white,
+        borderRadius: BorderRadius.circular(0),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -249,10 +251,11 @@ class _AlertFeed extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF2F0),
-        borderRadius: BorderRadius.circular(24),
+        color: isDark ? AppColors.darkCardBackground : const Color(0xFFFFF2F0),
+        borderRadius: BorderRadius.circular(0),
         border: Border.all(color: const Color(0xFFFFD9D4)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -310,10 +313,11 @@ class _SurveyFeed extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF4FFFE),
-        borderRadius: BorderRadius.circular(24),
+        color: isDark ? AppColors.darkCardBackground : const Color(0xFFF4FFFE),
+        borderRadius: BorderRadius.circular(0),
         border: Border.all(color: const Color(0xFFD9F4F2)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),

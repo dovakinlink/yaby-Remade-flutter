@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
+import 'package:yabai_app/core/providers/theme_provider.dart';
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({super.key, this.onOpenDrawer, this.onOpenMessages});
@@ -10,6 +12,9 @@ class HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -38,59 +43,84 @@ class HomeHeader extends StatelessWidget {
               textAlign: TextAlign.center,
               style: textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: Colors.black,
               ),
             ),
           ),
-          // 右侧消息按钮
-          Stack(
-            clipBehavior: Clip.none,
+          // 右侧按钮组
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
+              // 主题切换按钮
               GestureDetector(
-                onTap: onOpenMessages,
+                onTap: () async {
+                  await themeProvider.toggleTheme();
+                },
                 child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: const BoxDecoration(
-                    color: Colors.black,
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkCardBackground : Colors.grey[100],
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.chat_bubble_outline_rounded,
-                    color: Colors.white,
-                    size: 14,
+                  child: Icon(
+                    themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                    color: isDark ? AppColors.darkNeutralText : Colors.grey[700],
+                    size: 16,
                   ),
                 ),
               ),
-              // 消息数字标记
-              Positioned(
-                top: -8,
-                right: -8,
-                child: Container(
-                  width: 16,
-                  height: 16,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Container(
-                    margin: const EdgeInsets.all(1),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF10B981),
-                      shape: BoxShape.circle,
+              const SizedBox(width: 12),
+              // 消息按钮
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  GestureDetector(
+                    onTap: onOpenMessages,
+                    child: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkNeutralText : Colors.black,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        color: isDark ? AppColors.darkScaffoldBackground : Colors.white,
+                        size: 14,
+                      ),
                     ),
-                    child: Center(
-                      child: Text(
-                        '2',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
+                  ),
+                  // 消息数字标记
+                  Positioned(
+                    top: -8,
+                    right: -8,
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkScaffoldBackground : Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Container(
+                        margin: const EdgeInsets.all(1),
+                        decoration: const BoxDecoration(
+                          color: AppColors.brandGreen,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: Text(
+                            '2',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ],
           ),

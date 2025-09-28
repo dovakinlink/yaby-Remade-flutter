@@ -133,12 +133,13 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: isDark ? AppColors.darkScaffoldBackground : const Color(0xFFF8F9FA),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _onRefresh,
-          backgroundColor: Colors.white,
+          backgroundColor: isDark ? AppColors.darkCardBackground : Colors.white,
           color: AppColors.brandGreen,
           child: CustomScrollView(
             controller: _scrollController,
@@ -174,16 +175,13 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                sliver: SliverList.separated(
-                  itemBuilder: (context, index) {
-                    final feed = _feeds[index];
-                    return FeedCard(feed: feed);
-                  },
-                  separatorBuilder: (_, __) => const SizedBox(height: 18),
-                  itemCount: _feeds.length,
-                ),
+              SliverList.separated(
+                itemBuilder: (context, index) {
+                  final feed = _feeds[index];
+                  return FeedCard(feed: feed);
+                },
+                separatorBuilder: (_, __) => const SizedBox(height: 4),
+                itemCount: _feeds.length,
               ),
               SliverToBoxAdapter(
                 child: Padding(
