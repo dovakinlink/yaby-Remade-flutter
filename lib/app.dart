@@ -8,7 +8,16 @@ import 'package:yabai_app/features/auth/data/repositories/auth_repository.dart';
 import 'package:yabai_app/features/auth/providers/auth_session_provider.dart';
 import 'package:yabai_app/features/auth/providers/login_form_provider.dart';
 import 'package:yabai_app/features/auth/presentation/pages/login_page.dart';
+import 'package:yabai_app/features/home/data/models/announcement_model.dart';
+import 'package:yabai_app/features/home/data/repositories/announcement_repository.dart';
+import 'package:yabai_app/features/home/data/repositories/post_repository.dart';
+import 'package:yabai_app/features/home/data/repositories/project_statistics_repository.dart';
+import 'package:yabai_app/features/home/presentation/pages/announcement_detail_page.dart';
+import 'package:yabai_app/features/home/presentation/pages/create_post_page.dart';
 import 'package:yabai_app/features/home/presentation/pages/home_page.dart';
+import 'package:yabai_app/features/home/providers/create_post_provider.dart';
+import 'package:yabai_app/features/home/providers/home_announcements_provider.dart';
+import 'package:yabai_app/features/home/providers/project_statistics_provider.dart';
 
 class YabaiApp extends StatefulWidget {
   const YabaiApp({super.key});
@@ -34,7 +43,66 @@ class _YabaiAppState extends State<YabaiApp> {
         GoRoute(
           path: HomePage.routePath,
           name: HomePage.routeName,
-          builder: (context, state) => const HomePage(),
+          builder: (context, state) {
+            return MultiProvider(
+              providers: [
+                ChangeNotifierProvider(
+                  create: (context) => HomeAnnouncementsProvider(
+                    context.read<AnnouncementRepository>(),
+                  )..loadInitial(),
+                ),
+                ChangeNotifierProvider(
+                  create: (context) => ProjectStatisticsProvider(
+                    context.read<ProjectStatisticsRepository>(),
+                  )..load(),
+                ),
+              ],
+              child: const HomePage(),
+            );
+          },
+          routes: [
+            GoRoute(
+              path: 'announcement/:id',
+              name: AnnouncementDetailPage.routeName,
+              builder: (context, state) {
+                AnnouncementModel? announcement;
+                final extra = state.extra;
+                if (extra is AnnouncementModel) {
+                  announcement = extra;
+                } else {
+                  final idParam = state.pathParameters['id'];
+                  final id = int.tryParse(idParam ?? '');
+                  if (id != null) {
+                    HomeAnnouncementsProvider? provider;
+                    try {
+                      provider = context.read<HomeAnnouncementsProvider>();
+                    } catch (_) {
+                      provider = null;
+                    }
+                    announcement = provider?.findById(id);
+                  }
+                }
+
+                if (announcement == null) {
+                  return const _AnnouncementMissingPage();
+                }
+
+                return AnnouncementDetailPage(announcement: announcement);
+              },
+            ),
+            GoRoute(
+              path: 'create-post',
+              name: CreatePostPage.routeName,
+              builder: (context, state) {
+                return ChangeNotifierProvider(
+                  create: (context) => CreatePostProvider(
+                    context.read<PostRepository>(),
+                  ),
+                  child: const CreatePostPage(),
+                );
+              },
+            ),
+          ],
         ),
       ],
     );
@@ -45,11 +113,28 @@ class _YabaiAppState extends State<YabaiApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        Provider(create: (_) => ApiClient()),
+        ChangeNotifierProvider(create: (_) => AuthSessionProvider()),
+        ProxyProvider<AuthSessionProvider, ApiClient>(
+          update: (context, session, client) {
+            final apiClient = client ?? ApiClient();
+            apiClient.updateAuthToken(session.tokens?.accessToken);
+            return apiClient;
+          },
+        ),
         Provider(
           create: (context) => AuthRepository(context.read<ApiClient>()),
         ),
-        ChangeNotifierProvider(create: (_) => AuthSessionProvider()),
+        Provider(
+          create: (context) =>
+              AnnouncementRepository(context.read<ApiClient>()),
+        ),
+        Provider(
+          create: (context) =>
+              ProjectStatisticsRepository(context.read<ApiClient>()),
+        ),
+        Provider(
+          create: (context) => PostRepository(context.read<ApiClient>()),
+        ),
         ChangeNotifierProvider(create: (_) => LoginFormProvider()),
       ],
       child: Consumer<ThemeProvider>(
@@ -64,6 +149,18 @@ class _YabaiAppState extends State<YabaiApp> {
           );
         },
       ),
+    );
+  }
+}
+
+class _AnnouncementMissingPage extends StatelessWidget {
+  const _AnnouncementMissingPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('通知公告')),
+      body: const Center(child: Text('找不到对应的通知公告，可能已被删除。')),
     );
   }
 }

@@ -44,29 +44,19 @@ class SearchStatsCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       '食管癌一线治疗有合适的临床项目吗？',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
                     ),
                   ),
-                  Icon(
-                    Icons.search,
-                    color: Colors.grey[400],
-                    size: 20,
-                  ),
+                  Icon(Icons.search, color: Colors.grey[400], size: 20),
                 ],
               ),
             ),
             const SizedBox(height: 32),
             // 统计数据
             Row(
-              children: [
-                _buildStatItem('入组中', '124'),
-                _buildStatItem('待开始', '3'),
-                _buildStatItem('停止', '87'),
-                _buildStatItem('总数', '214'),
-              ],
+              children: stats
+                  .map((item) => _buildStatItem(item))
+                  .toList(growable: false),
             ),
           ],
         ),
@@ -74,12 +64,12 @@ class SearchStatsCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItem(String label, String count) {
+  Widget _buildStatItem(SearchStatItem item) {
     return Expanded(
       child: Column(
         children: [
           Text(
-            label,
+            item.label,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 14,
@@ -88,13 +78,25 @@ class SearchStatsCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            count,
+            item.value,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 32,
               fontWeight: FontWeight.w600,
             ),
           ),
+          if (item.caption != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              item.caption!,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ],
       ),
     );
