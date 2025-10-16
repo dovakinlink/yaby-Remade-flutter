@@ -156,6 +156,9 @@ class _HomePageState extends State<HomePage> {
                       ),
                     );
                   },
+                  onTap: () {
+                    context.pushNamed('projects');
+                  },
                 ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 24)),

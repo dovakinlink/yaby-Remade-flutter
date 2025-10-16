@@ -14,51 +14,59 @@ class SearchStatItem {
 }
 
 class SearchStatsCard extends StatelessWidget {
-  const SearchStatsCard({super.key, required this.stats, this.onSubmitted})
-    : assert(stats.length >= 2, 'stats 至少包含两个数据');
+  const SearchStatsCard({
+    super.key,
+    required this.stats,
+    this.onSubmitted,
+    this.onTap,
+  }) : assert(stats.length >= 2, 'stats 至少包含两个数据');
 
   final List<SearchStatItem> stats;
   final ValueChanged<String>? onSubmitted;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: AppColors.brandGreen,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          children: [
-            // 搜索框
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '食管癌一线治疗有合适的临床项目吗？',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.brandGreen,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            children: [
+              // 搜索框
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '食管癌一线治疗有合适的临床项目吗？',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      ),
                     ),
-                  ),
-                  Icon(Icons.search, color: Colors.grey[400], size: 20),
-                ],
+                    Icon(Icons.search, color: Colors.grey[400], size: 20),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 32),
-            // 统计数据
-            Row(
-              children: stats
-                  .map((item) => _buildStatItem(item))
-                  .toList(growable: false),
-            ),
-          ],
+              const SizedBox(height: 32),
+              // 统计数据
+              Row(
+                children: stats
+                    .map((item) => _buildStatItem(item))
+                    .toList(growable: false),
+              ),
+            ],
+          ),
         ),
       ),
     );

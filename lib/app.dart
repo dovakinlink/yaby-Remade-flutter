@@ -11,12 +11,15 @@ import 'package:yabai_app/features/auth/presentation/pages/login_page.dart';
 import 'package:yabai_app/features/home/data/models/announcement_model.dart';
 import 'package:yabai_app/features/home/data/repositories/announcement_repository.dart';
 import 'package:yabai_app/features/home/data/repositories/post_repository.dart';
+import 'package:yabai_app/features/home/data/repositories/project_repository.dart';
 import 'package:yabai_app/features/home/data/repositories/project_statistics_repository.dart';
 import 'package:yabai_app/features/home/presentation/pages/announcement_detail_page.dart';
 import 'package:yabai_app/features/home/presentation/pages/create_post_page.dart';
 import 'package:yabai_app/features/home/presentation/pages/home_page.dart';
+import 'package:yabai_app/features/home/presentation/pages/project_list_page.dart';
 import 'package:yabai_app/features/home/providers/create_post_provider.dart';
 import 'package:yabai_app/features/home/providers/home_announcements_provider.dart';
+import 'package:yabai_app/features/home/providers/project_list_provider.dart';
 import 'package:yabai_app/features/home/providers/project_statistics_provider.dart';
 
 class YabaiApp extends StatefulWidget {
@@ -102,6 +105,18 @@ class _YabaiAppState extends State<YabaiApp> {
                 );
               },
             ),
+            GoRoute(
+              path: ProjectListPage.routePath,
+              name: ProjectListPage.routeName,
+              builder: (context, state) {
+                return ChangeNotifierProvider(
+                  create: (context) => ProjectListProvider(
+                    context.read<ProjectRepository>(),
+                  )..loadInitial(),
+                  child: const ProjectListPage(),
+                );
+              },
+            ),
           ],
         ),
       ],
@@ -134,6 +149,9 @@ class _YabaiAppState extends State<YabaiApp> {
         ),
         Provider(
           create: (context) => PostRepository(context.read<ApiClient>()),
+        ),
+        Provider(
+          create: (context) => ProjectRepository(context.read<ApiClient>()),
         ),
         ChangeNotifierProvider(create: (_) => LoginFormProvider()),
       ],

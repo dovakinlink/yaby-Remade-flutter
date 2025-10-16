@@ -19,7 +19,7 @@ class EnvConfig {
   );
   static const String lanHost = String.fromEnvironment(
     'API_LAN_HOST',
-    defaultValue: 'http://192.168.0.103:8090',
+    defaultValue: 'http://192.168.0.101:8090',
   );
 
   static String get initialBaseUrl => simulatorHost;
