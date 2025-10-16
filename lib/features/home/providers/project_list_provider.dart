@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:yabai_app/core/network/api_exception.dart';
+import 'package:yabai_app/core/network/models/page_response.dart';
 import 'package:yabai_app/features/home/data/models/attr_definition_model.dart';
 import 'package:yabai_app/features/home/data/models/filter_value_model.dart';
 import 'package:yabai_app/features/home/data/models/project_model.dart';
@@ -31,6 +32,13 @@ class ProjectListProvider extends ChangeNotifier {
   int _currentPage = 0;
   int _pageSize = 10;
   Map<String, String>? _attrFilters;
+
+  // 搜索相关状态
+  bool _isSearchMode = false;
+  bool get isSearchMode => _isSearchMode;
+
+  String _searchKeyword = '';
+  String get searchKeyword => _searchKeyword;
 
   // 属性定义相关状态
   final List<AttrDefinitionModel> _attrDefinitions = [];
@@ -75,11 +83,23 @@ class ProjectListProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final page = await _repository.fetchProjects(
-        page: _currentPage,
-        size: _pageSize,
-        attrFilters: _attrFilters,
-      );
+      final PageResponse<ProjectModel> page;
+
+      // 根据搜索模式调用不同的接口
+      if (_isSearchMode && _searchKeyword.isNotEmpty) {
+        page = await _repository.searchProjects(
+          keyword: _searchKeyword,
+          page: _currentPage,
+          size: _pageSize,
+        );
+      } else {
+        page = await _repository.fetchProjects(
+          page: _currentPage,
+          size: _pageSize,
+          attrFilters: _attrFilters,
+        );
+      }
+
       _projects
         ..clear()
         ..addAll(page.data);
@@ -115,11 +135,23 @@ class ProjectListProvider extends ChangeNotifier {
 
     final nextPage = _currentPage + 1;
     try {
-      final page = await _repository.fetchProjects(
-        page: nextPage,
-        size: _pageSize,
-        attrFilters: _attrFilters,
-      );
+      final PageResponse<ProjectModel> page;
+
+      // 根据搜索模式调用不同的接口
+      if (_isSearchMode && _searchKeyword.isNotEmpty) {
+        page = await _repository.searchProjects(
+          keyword: _searchKeyword,
+          page: nextPage,
+          size: _pageSize,
+        );
+      } else {
+        page = await _repository.fetchProjects(
+          page: nextPage,
+          size: _pageSize,
+          attrFilters: _attrFilters,
+        );
+      }
+
       _projects.addAll(page.data);
       _currentPage = page.page;
       _hasNext = page.hasNext;
@@ -245,6 +277,35 @@ class ProjectListProvider extends ChangeNotifier {
     return Map.fromEntries(
       attr.options.map((opt) => MapEntry(opt.id, opt.label)),
     );
+  }
+
+  /// 搜索项目
+  Future<void> search(String keyword) async {
+    final trimmedKeyword = keyword.trim();
+
+    // 验证关键词
+    if (trimmedKeyword.isEmpty) {
+      return;
+    }
+
+    if (trimmedKeyword.length < 2) {
+      _errorMessage = '搜索关键词至少需要2个字符';
+      notifyListeners();
+      return;
+    }
+
+    _isSearchMode = true;
+    _searchKeyword = trimmedKeyword;
+    _attrFilters = null; // 搜索模式下清空筛选条件
+
+    await loadInitial(force: true);
+  }
+
+  /// 清空搜索，返回列表模式
+  Future<void> clearSearch() async {
+    _isSearchMode = false;
+    _searchKeyword = '';
+    await loadInitial(force: true);
   }
 }
 

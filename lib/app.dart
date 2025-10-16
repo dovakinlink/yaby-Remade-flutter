@@ -16,9 +16,11 @@ import 'package:yabai_app/features/home/data/repositories/project_statistics_rep
 import 'package:yabai_app/features/home/presentation/pages/announcement_detail_page.dart';
 import 'package:yabai_app/features/home/presentation/pages/create_post_page.dart';
 import 'package:yabai_app/features/home/presentation/pages/home_page.dart';
+import 'package:yabai_app/features/home/presentation/pages/project_detail_page.dart';
 import 'package:yabai_app/features/home/presentation/pages/project_list_page.dart';
 import 'package:yabai_app/features/home/providers/create_post_provider.dart';
 import 'package:yabai_app/features/home/providers/home_announcements_provider.dart';
+import 'package:yabai_app/features/home/providers/project_detail_provider.dart';
 import 'package:yabai_app/features/home/providers/project_list_provider.dart';
 import 'package:yabai_app/features/home/providers/project_statistics_provider.dart';
 
@@ -116,6 +118,30 @@ class _YabaiAppState extends State<YabaiApp> {
                   child: const ProjectListPage(),
                 );
               },
+              routes: [
+                GoRoute(
+                  path: ProjectDetailPage.routePath,
+                  name: ProjectDetailPage.routeName,
+                  builder: (context, state) {
+                    final idParam = state.pathParameters['id'];
+                    final id = int.tryParse(idParam ?? '');
+
+                    if (id == null) {
+                      return Scaffold(
+                        appBar: AppBar(title: const Text('错误')),
+                        body: const Center(child: Text('无效的项目ID')),
+                      );
+                    }
+
+                    return ChangeNotifierProvider(
+                      create: (context) => ProjectDetailProvider(
+                        context.read<ProjectRepository>(),
+                      ),
+                      child: ProjectDetailPage(projectId: id),
+                    );
+                  },
+                ),
+              ],
             ),
           ],
         ),

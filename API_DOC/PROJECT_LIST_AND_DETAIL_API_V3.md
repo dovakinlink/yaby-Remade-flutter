@@ -48,6 +48,11 @@ GET /api/v1/projects
 - **key**: 属性编码（如 tumor_type, tumor_stage）
 - **value**: 选项ID或属性值
 - **多个条件**: 多个筛选条件之间是 AND 关系
+- **支持类型**:
+  - **单选选项** (option): 通过 `option_id` 匹配
+  - **多选选项** (multi_option): 通过 `option_ids_json` 匹配（JSON数组）
+  - **整数** (int): 通过 `int_val` 匹配
+  - **文本** (text): 通过 `text_val` 匹配
 
 **请求头**
 ```

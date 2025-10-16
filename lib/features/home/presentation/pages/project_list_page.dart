@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/home/presentation/widgets/project_card.dart';
 import 'package:yabai_app/features/home/presentation/widgets/project_filter_sheet.dart';
+import 'package:yabai_app/features/home/presentation/widgets/project_search_bar.dart';
 import 'package:yabai_app/features/home/providers/project_list_provider.dart';
 
 class ProjectListPage extends StatefulWidget {
@@ -120,13 +122,32 @@ class _ProjectListPageState extends State<ProjectListPage> {
               parent: AlwaysScrollableScrollPhysics(),
             ),
             slivers: [
+              // 搜索栏
+              SliverToBoxAdapter(
+                child: ProjectSearchBar(
+                  initialValue: provider.searchKeyword,
+                  onSearch: (keyword) => provider.search(keyword),
+                  onCancel: () => provider.clearSearch(),
+                  isSearchMode: provider.isSearchMode,
+                ),
+              ),
+              
+              // 搜索模式提示
+              if (provider.isSearchMode)
+                SliverToBoxAdapter(
+                  child: _buildSearchModeHeader(provider, isDark),
+                ),
+              
               const SliverToBoxAdapter(child: SizedBox(height: 8)),
-              // 筛选条件 Chips
-              if (provider.activeFiltersCount > 0)
+              
+              // 筛选条件 Chips（非搜索模式时显示）
+              if (provider.activeFiltersCount > 0 && !provider.isSearchMode)
                 SliverToBoxAdapter(
                   child: _buildFilterChips(provider, isDark),
                 ),
+              
               ..._buildProjectSlivers(provider),
+              
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 32),
@@ -177,27 +198,41 @@ class _ProjectListPageState extends State<ProjectListPage> {
     }
 
     if (provider.projects.isEmpty) {
-      return const [
+      return [
         SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 64),
+            padding: const EdgeInsets.symmetric(vertical: 64),
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    Icons.folder_open_outlined,
+                    provider.isSearchMode
+                        ? Icons.search_off
+                        : Icons.folder_open_outlined,
                     size: 64,
-                    color: Color(0xFF94A3B8),
+                    color: const Color(0xFF94A3B8),
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
-                    '暂无临床试验项目',
-                    style: TextStyle(
+                    provider.isSearchMode
+                        ? '没有找到相关项目'
+                        : '暂无临床试验项目',
+                    style: const TextStyle(
                       color: Color(0xFF94A3B8),
                       fontSize: 16,
                     ),
                   ),
+                  if (provider.isSearchMode) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '试试其他关键词',
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -213,12 +248,9 @@ class _ProjectListPageState extends State<ProjectListPage> {
           return ProjectCard(
             project: project,
             onTap: () {
-              // TODO: 跳转到项目详情页
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('项目详情功能即将上线 (ID: ${project.id})'),
-                  duration: const Duration(seconds: 2),
-                ),
+              context.pushNamed(
+                'project-detail',
+                pathParameters: {'id': '${project.id}'},
               );
             },
           );
@@ -277,6 +309,48 @@ class _ProjectListPageState extends State<ProjectListPage> {
     return const Text(
       '下拉刷新，继续加载更多内容',
       style: TextStyle(color: Color(0xFF94A3B8)),
+    );
+  }
+
+  Widget _buildSearchModeHeader(ProjectListProvider provider, bool isDark) {
+    final totalCount = provider.projects.length;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? AppColors.darkSecondaryText : Colors.grey[700],
+                ),
+                children: [
+                  const TextSpan(text: '搜索 "'),
+                  TextSpan(
+                    text: provider.searchKeyword,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.brandGreen,
+                    ),
+                  ),
+                  const TextSpan(text: '" 的结果'),
+                ],
+              ),
+            ),
+          ),
+          if (!provider.isInitialLoading)
+            Text(
+              '$totalCount 项',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isDark ? AppColors.darkSecondaryText : Colors.grey[700],
+              ),
+            ),
+        ],
+      ),
     );
   }
 
