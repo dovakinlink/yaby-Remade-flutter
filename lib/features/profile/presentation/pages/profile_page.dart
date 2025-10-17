@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/core/widgets/animated_medical_background.dart';
+import 'package:yabai_app/features/auth/data/models/user_profile.dart';
 import 'package:yabai_app/features/auth/presentation/pages/login_page.dart';
 import 'package:yabai_app/features/auth/providers/auth_session_provider.dart';
 import 'package:yabai_app/features/auth/providers/user_profile_provider.dart';
@@ -150,26 +151,28 @@ class _ProfilePageState extends State<ProfilePage>
           final resolvedAvatarUrl = profile.hasAvatar
               ? apiClient.resolveUrlSync(profile.avatar!)
               : null;
+          final infoRows = _buildProfileInfoRows(profile, isDark);
 
-          headerContent = Column(
+          headerContent = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 90,
-                height: 90,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
                   color: AppColors.brandGreen.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: Colors.white.withValues(alpha: 0.6),
-                    width: 1.4,
+                    width: 1.2,
                   ),
                 ),
                 child: resolvedAvatarUrl != null
                     ? ClipOval(
                         child: Image.network(
                           resolvedAvatarUrl,
-                          width: 90,
-                          height: 90,
+                          width: 72,
+                          height: 72,
                           fit: BoxFit.cover,
                           headers: apiClient.getAuthHeaders(),
                           errorBuilder: (context, error, stackTrace) {
@@ -179,43 +182,42 @@ class _ProfilePageState extends State<ProfilePage>
                       )
                     : _buildAvatarFallback(profile.displayName),
               ),
-              const SizedBox(height: 16),
-              Text(
-                profile.displayName,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.darkNeutralText : null,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      profile.displayName,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? AppColors.darkNeutralText : null,
+                          ),
                     ),
-              ),
-              if (profile.nickname != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  '@${profile.username}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: isDark
-                            ? AppColors.darkSecondaryText
-                            : Colors.grey[600],
+                    if (profile.nickname != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '@${profile.username}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isDark
+                                  ? AppColors.darkSecondaryText
+                                  : Colors.grey[600],
+                            ),
                       ),
+                    ],
+                    if (infoRows.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: infoRows,
+                      ),
+                    ],
+                  ],
                 ),
-              ],
-              if (!profile.isActive) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.red[100],
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '账号已禁用',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.red[900],
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ],
           );
         }
@@ -273,6 +275,67 @@ class _ProfilePageState extends State<ProfilePage>
         ),
       ),
     );
+  }
+
+  List<Widget> _buildProfileInfoRows(UserProfile profile, bool isDark) {
+    final rows = <Widget>[];
+    final valueStyle = TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: isDark ? AppColors.darkNeutralText : const Color(0xFF0F172A),
+    );
+
+    void addInfo({required IconData icon, required String value}) {
+      rows.add(
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: AppColors.brandGreen.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 14, color: AppColors.brandGreen),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                value,
+                style: valueStyle,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final role = profile.primaryRoleName;
+    if (role != null && role.isNotEmpty) {
+      addInfo(icon: Icons.badge_outlined, value: role);
+    }
+
+    if (profile.affiliationType == 'HOSPITAL') {
+      final hospital = profile.hospitalName;
+      final department = profile.departmentName;
+      if (hospital != null && hospital.isNotEmpty) {
+        addInfo(icon: Icons.local_hospital_outlined, value: hospital);
+      }
+      if (department != null && department.isNotEmpty) {
+        addInfo(icon: Icons.apartment_outlined, value: department);
+      }
+    } else {
+      final company = profile.companyName;
+      if (company != null && company.isNotEmpty) {
+        addInfo(icon: Icons.business_outlined, value: company);
+      }
+    }
+
+    return rows;
   }
 
   Widget _buildSettingsTab(bool isDark) {

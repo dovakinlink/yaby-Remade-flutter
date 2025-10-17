@@ -30,6 +30,12 @@ import 'package:yabai_app/features/home/providers/project_statistics_provider.da
 import 'package:yabai_app/features/profile/data/repositories/my_posts_repository.dart';
 import 'package:yabai_app/features/profile/providers/my_posts_provider.dart';
 import 'package:yabai_app/features/profile/presentation/pages/profile_page.dart';
+import 'package:yabai_app/features/learning/data/models/learning_resource_model.dart';
+import 'package:yabai_app/features/learning/data/repositories/learning_resource_repository.dart';
+import 'package:yabai_app/features/learning/providers/learning_resource_list_provider.dart';
+import 'package:yabai_app/features/learning/providers/learning_resource_detail_provider.dart';
+import 'package:yabai_app/features/learning/presentation/pages/learning_resource_list_page.dart';
+import 'package:yabai_app/features/learning/presentation/pages/learning_resource_detail_page.dart';
 
 class YabaiApp extends StatefulWidget {
   const YabaiApp({super.key});
@@ -167,6 +173,51 @@ class _YabaiAppState extends State<YabaiApp> {
                 );
               },
             ),
+            GoRoute(
+              path: LearningResourceListPage.routePath,
+              name: LearningResourceListPage.routeName,
+              builder: (context, state) {
+                return ChangeNotifierProvider(
+                  create: (context) => LearningResourceListProvider(
+                    context.read<LearningResourceRepository>(),
+                  ),
+                  child: const LearningResourceListPage(),
+                );
+              },
+              routes: [
+                GoRoute(
+                  path: LearningResourceDetailPage.routePath,
+                  name: LearningResourceDetailPage.routeName,
+                  builder: (context, state) {
+                    final idParam = state.pathParameters['id'];
+                    final id = int.tryParse(idParam ?? '');
+
+                    if (id == null) {
+                      return Scaffold(
+                        appBar: AppBar(title: const Text('错误')),
+                        body: const Center(child: Text('无效的资源ID')),
+                      );
+                    }
+
+                    LearningResource? resource;
+                    final extra = state.extra;
+                    if (extra is LearningResource) {
+                      resource = extra;
+                    }
+
+                    return ChangeNotifierProvider(
+                      create: (context) => LearningResourceDetailProvider(
+                        context.read<LearningResourceRepository>(),
+                      ),
+                      child: LearningResourceDetailPage(
+                        resourceId: id,
+                        resource: resource,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ],
         ),
       ],
@@ -249,6 +300,14 @@ class _YabaiAppState extends State<YabaiApp> {
         ),
         Provider(
           create: (context) => MyPostsRepository(context.read<ApiClient>()),
+        ),
+        Provider(
+          create: (context) => LearningResourceRepository(context.read<ApiClient>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => LearningResourceListProvider(
+            context.read<LearningResourceRepository>(),
+          ),
         ),
         ChangeNotifierProvider(create: (_) => LoginFormProvider()),
       ],

@@ -255,6 +255,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 **成功响应 (200)**:
 
+示例1 - 医院人员（医生）：
+
 ```json
 {
   "success": true,
@@ -270,7 +272,51 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     "orgId": 1,
     "status": 1,
     "createTime": "2025-09-15T10:30:00",
-    "updateTime": "2025-10-15T14:20:00"
+    "updateTime": "2025-10-15T14:20:00",
+    "roleCode": "PI",
+    "roleName": "主要研究者",
+    "systemRoleId": 5,
+    "systemRoleName": "研究医生",
+    "affiliationType": "HOSPITAL",
+    "hospitalId": 1,
+    "hospitalName": "北京协和医院",
+    "departmentId": 10,
+    "departmentName": "肿瘤科",
+    "companyId": null,
+    "companyName": null
+  }
+}
+```
+
+示例2 - CRC人员：
+
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "data": {
+    "id": 23,
+    "username": "18539902064",
+    "nickname": "张紫宁",
+    "phone": "18539902064",
+    "email": null,
+    "avatar": "/uploads/2025/10/11/6d4c0100_be4fe84137404242901739639 1ff20b2.png",
+    "orgId": 1,
+    "status": 1,
+    "createTime": "2025-09-18T17:28:19",
+    "updateTime": "2025-10-11T19:08:18",
+    "roleCode": "CRC",
+    "roleName": "临床研究协调员",
+    "systemRoleId": 8,
+    "systemRoleName": "CRC",
+    "affiliationType": "CRO",
+    "hospitalId": null,
+    "hospitalName": null,
+    "departmentId": null,
+    "departmentName": null,
+    "companyId": 15,
+    "companyName": "某某CRO公司"
   }
 }
 ```
@@ -310,6 +356,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 #### 响应字段说明
 
+**基本信息**:
+
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | number | 用户ID |
@@ -322,6 +370,33 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 | status | number | 用户状态：1-正常，0-禁用 |
 | createTime | string | 注册时间（ISO 8601格式） |
 | updateTime | string | 最后更新时间（ISO 8601格式） |
+
+**角色信息**:
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| roleCode | string \| null | 业务角色代码（如：CRC、CRA、PI等） |
+| roleName | string \| null | 业务角色名称（如：临床研究协调员、主要研究者） |
+| systemRoleId | number \| null | 系统角色ID（对应t_role表） |
+| systemRoleName | string \| null | 系统角色名称（如：研究医生、CRC） |
+
+**归属信息**:
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| affiliationType | string \| null | 归属类型：HOSPITAL(医院)、CRO(CRO公司)、SPONSOR(申办方) |
+| hospitalId | number \| null | 医院ID（当归属类型为HOSPITAL时有值） |
+| hospitalName | string \| null | 医院名称（当归属类型为HOSPITAL时有值） |
+| departmentId | number \| null | 科室ID（当归属医院且有科室时有值） |
+| departmentName | string \| null | 科室名称（当归属医院且有科室时有值） |
+| companyId | number \| null | 公司ID（当归属类型为CRO或SPONSOR时有值） |
+| companyName | string \| null | 公司名称（当归属类型为CRO或SPONSOR时有值） |
+
+**字段关系说明**:
+
+- 当 `affiliationType = "HOSPITAL"` 时，`hospitalId/hospitalName` 和 `departmentId/departmentName` 可能有值，`companyId/companyName` 为null
+- 当 `affiliationType = "CRO"` 或 `"SPONSOR"` 时，`companyId/companyName` 有值，`hospitalId/hospitalName` 和 `departmentId/departmentName` 为null
+- 不是所有医院人员都有科室信息，`departmentId/departmentName` 可能为null
 
 #### 使用场景
 
@@ -768,6 +843,7 @@ class AnnouncementApiService {
 ```dart
 // 用户个人信息模型
 class UserProfile {
+  // 基本信息
   final int id;
   final String username;
   final String? nickname;
@@ -778,6 +854,21 @@ class UserProfile {
   final int status;
   final DateTime createTime;
   final DateTime updateTime;
+  
+  // 角色信息
+  final String? roleCode;
+  final String? roleName;
+  final int? systemRoleId;
+  final String? systemRoleName;
+  
+  // 归属信息
+  final String? affiliationType;
+  final int? hospitalId;
+  final String? hospitalName;
+  final int? departmentId;
+  final String? departmentName;
+  final int? companyId;
+  final String? companyName;
 
   UserProfile({
     required this.id,
@@ -790,6 +881,17 @@ class UserProfile {
     required this.status,
     required this.createTime,
     required this.updateTime,
+    this.roleCode,
+    this.roleName,
+    this.systemRoleId,
+    this.systemRoleName,
+    this.affiliationType,
+    this.hospitalId,
+    this.hospitalName,
+    this.departmentId,
+    this.departmentName,
+    this.companyId,
+    this.companyName,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -804,6 +906,17 @@ class UserProfile {
       status: json['status'],
       createTime: DateTime.parse(json['createTime']),
       updateTime: DateTime.parse(json['updateTime']),
+      roleCode: json['roleCode'],
+      roleName: json['roleName'],
+      systemRoleId: json['systemRoleId'],
+      systemRoleName: json['systemRoleName'],
+      affiliationType: json['affiliationType'],
+      hospitalId: json['hospitalId'],
+      hospitalName: json['hospitalName'],
+      departmentId: json['departmentId'],
+      departmentName: json['departmentName'],
+      companyId: json['companyId'],
+      companyName: json['companyName'],
     );
   }
 
@@ -818,6 +931,46 @@ class UserProfile {
   
   // 是否有头像
   bool get hasAvatar => avatar != null && avatar!.isNotEmpty;
+  
+  // 是否为医院人员
+  bool get isHospitalStaff => affiliationType == 'HOSPITAL';
+  
+  // 是否为CRO人员
+  bool get isCROStaff => affiliationType == 'CRO';
+  
+  // 是否为申办方人员
+  bool get isSponsorStaff => affiliationType == 'SPONSOR';
+  
+  // 获取完整的职位描述
+  String get fullRoleDescription {
+    if (roleName != null && systemRoleName != null) {
+      return '$roleName ($systemRoleName)';
+    }
+    return roleName ?? systemRoleName ?? '未设置角色';
+  }
+  
+  // 获取归属单位名称
+  String? get affiliationName {
+    if (isHospitalStaff) {
+      return hospitalName;
+    } else if (isCROStaff || isSponsorStaff) {
+      return companyName;
+    }
+    return null;
+  }
+  
+  // 获取完整的单位和科室信息
+  String? get fullAffiliationInfo {
+    if (isHospitalStaff) {
+      if (hospitalName != null && departmentName != null) {
+        return '$hospitalName - $departmentName';
+      }
+      return hospitalName;
+    } else if (isCROStaff || isSponsorStaff) {
+      return companyName;
+    }
+    return null;
+  }
 }
 ```
 
