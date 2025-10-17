@@ -21,6 +21,10 @@ class EnvConfig {
     'API_LAN_HOST',
     defaultValue: 'http://192.168.0.101:8090',
   );
+  static const String macOSHost = String.fromEnvironment(
+    'API_MACOS_HOST',
+    defaultValue: 'http://127.0.0.1:8090',
+  );
 
   static String get initialBaseUrl => simulatorHost;
 

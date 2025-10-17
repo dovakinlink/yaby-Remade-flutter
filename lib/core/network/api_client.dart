@@ -21,6 +21,16 @@ class ApiClient {
   final Dio dio;
   String? _authToken;
 
+  /// 添加拦截器
+  void addInterceptor(Interceptor interceptor) {
+    dio.interceptors.add(interceptor);
+  }
+
+  /// 清除所有拦截器
+  void clearInterceptors() {
+    dio.interceptors.clear();
+  }
+
   Future<Response<Map<String, dynamic>>> post(
     String path, {
     Map<String, dynamic>? data,
@@ -72,12 +82,17 @@ class ApiClient {
     if (rawUrl.isEmpty) {
       return rawUrl;
     }
-    final uri = Uri.tryParse(rawUrl);
+    var url = rawUrl;
+    if (_isStaticResource(url)) {
+      url = _normalizeStaticResourcePath(url);
+    }
+
+    final uri = Uri.tryParse(url);
     if (uri == null) {
-      return rawUrl;
+      return url;
     }
     if (uri.hasScheme) {
-      return rawUrl;
+      return url;
     }
     await _ensureBaseUrl();
     
@@ -86,14 +101,14 @@ class ApiClient {
         : EnvConfig.initialBaseUrl;
     
     // 对于静态资源，使用不带端口的baseUrl
-    final baseUrl = _isStaticResource(rawUrl) 
+    final baseUrl = _isStaticResource(url) 
         ? _getStaticResourceBaseUrl(base)
         : base;
     
     final baseUri = Uri.tryParse(baseUrl);
-    final target = Uri.tryParse(rawUrl);
+    final target = Uri.tryParse(url);
     if (baseUri == null || target == null) {
-      return rawUrl;
+      return url;
     }
     return baseUri.resolveUri(target).toString();
   }
@@ -102,11 +117,16 @@ class ApiClient {
     if (rawUrl.isEmpty) {
       return rawUrl;
     }
-    final uri = Uri.tryParse(rawUrl);
-    if (uri == null || uri.hasScheme) {
-      return rawUrl;
+    var url = rawUrl;
+    if (_isStaticResource(url)) {
+      url = _normalizeStaticResourcePath(url);
     }
-    return _resolveWithBase(rawUrl);
+
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.hasScheme) {
+      return url;
+    }
+    return _resolveWithBase(url);
   }
 
   String _resolveWithBase(String rawUrl) {
@@ -178,5 +198,32 @@ class ApiClient {
       scheme: uri.scheme,
       host: uri.host,
     ).toString();
+  }
+
+  String _normalizeStaticResourcePath(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      return url;
+    }
+
+    final segments = uri.pathSegments.toList();
+    if (segments.isEmpty) {
+      return url;
+    }
+
+    final index = segments.indexOf('files');
+    if (index == -1) {
+      return url;
+    }
+
+    // 跳过包含 api 的接口路径，例如 /api/files 或 /api/v1/files
+    final hasApiSegment = segments.take(index).contains('api');
+    if (hasApiSegment) {
+      return url;
+    }
+
+    segments[index] = 'uploads';
+    final normalized = uri.replace(pathSegments: segments);
+    return normalized.toString();
   }
 }

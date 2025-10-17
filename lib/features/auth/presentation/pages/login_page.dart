@@ -5,6 +5,7 @@ import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/auth/data/models/auth_exception.dart';
 import 'package:yabai_app/features/auth/data/repositories/auth_repository.dart';
 import 'package:yabai_app/features/auth/providers/auth_session_provider.dart';
+import 'package:yabai_app/features/auth/providers/user_profile_provider.dart';
 import 'package:yabai_app/core/widgets/animated_medical_background.dart';
 import 'package:yabai_app/core/widgets/labeled_text_field.dart';
 import 'package:yabai_app/core/widgets/primary_button.dart';
@@ -166,6 +167,8 @@ class _LoginPageState extends State<LoginPage> {
                                                     context.read<AuthRepository>();
                                                 final session =
                                                     context.read<AuthSessionProvider>();
+                                                final userProfile =
+                                                    context.read<UserProfileProvider>();
 
                                                 await form.submit(
                                                   onSubmit: (payload) async {
@@ -180,7 +183,11 @@ class _LoginPageState extends State<LoginPage> {
                                                             payload['password'] ??
                                                             '',
                                                       );
-                                                      session.save(tokens);
+                                                      await session.save(tokens);
+                                                      
+                                                      // 登录成功后立即获取用户信息
+                                                      await userProfile.loadProfile();
+                                                      
                                                       if (!context.mounted) {
                                                         return;
                                                       }

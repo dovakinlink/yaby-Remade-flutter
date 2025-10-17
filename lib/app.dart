@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:yabai_app/core/network/api_client.dart';
+import 'package:yabai_app/core/network/auth_interceptor.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/core/providers/theme_provider.dart';
 import 'package:yabai_app/features/auth/data/repositories/auth_repository.dart';
+import 'package:yabai_app/features/auth/data/models/auth_exception.dart';
+import 'package:yabai_app/features/auth/data/repositories/user_profile_repository.dart';
 import 'package:yabai_app/features/auth/providers/auth_session_provider.dart';
 import 'package:yabai_app/features/auth/providers/login_form_provider.dart';
+import 'package:yabai_app/features/auth/providers/user_profile_provider.dart';
 import 'package:yabai_app/features/auth/presentation/pages/login_page.dart';
 import 'package:yabai_app/features/home/data/models/announcement_model.dart';
 import 'package:yabai_app/features/home/data/repositories/announcement_repository.dart';
@@ -23,6 +27,9 @@ import 'package:yabai_app/features/home/providers/home_announcements_provider.da
 import 'package:yabai_app/features/home/providers/project_detail_provider.dart';
 import 'package:yabai_app/features/home/providers/project_list_provider.dart';
 import 'package:yabai_app/features/home/providers/project_statistics_provider.dart';
+import 'package:yabai_app/features/profile/data/repositories/my_posts_repository.dart';
+import 'package:yabai_app/features/profile/providers/my_posts_provider.dart';
+import 'package:yabai_app/features/profile/presentation/pages/profile_page.dart';
 
 class YabaiApp extends StatefulWidget {
   const YabaiApp({super.key});
@@ -60,6 +67,11 @@ class _YabaiAppState extends State<YabaiApp> {
                   create: (context) => ProjectStatisticsProvider(
                     context.read<ProjectStatisticsRepository>(),
                   )..load(),
+                ),
+                ChangeNotifierProvider(
+                  create: (context) => MyPostsProvider(
+                    context.read<MyPostsRepository>(),
+                  ),
                 ),
               ],
               child: const HomePage(),
@@ -143,6 +155,18 @@ class _YabaiAppState extends State<YabaiApp> {
                 ),
               ],
             ),
+            GoRoute(
+              path: ProfilePage.routePath,
+              name: ProfilePage.routeName,
+              builder: (context, state) {
+                return ChangeNotifierProvider(
+                  create: (context) => MyPostsProvider(
+                    context.read<MyPostsRepository>(),
+                  ),
+                  child: const ProfilePage(),
+                );
+              },
+            ),
           ],
         ),
       ],
@@ -162,8 +186,52 @@ class _YabaiAppState extends State<YabaiApp> {
             return apiClient;
           },
         ),
-        Provider(
-          create: (context) => AuthRepository(context.read<ApiClient>()),
+        ProxyProvider<ApiClient, UserProfileRepository>(
+          update: (context, apiClient, previous) =>
+              previous ?? UserProfileRepository(apiClient),
+        ),
+        ChangeNotifierProxyProvider<UserProfileRepository, UserProfileProvider>(
+          create: (context) => UserProfileProvider(
+            context.read<UserProfileRepository>(),
+          ),
+          update: (context, repository, previous) =>
+              previous ?? UserProfileProvider(repository),
+        ),
+        ProxyProvider2<ApiClient, AuthSessionProvider, AuthRepository>(
+          update: (context, apiClient, session, previous) {
+            // 只在首次创建时添加拦截器
+            if (previous == null) {
+              final authRepository = AuthRepository(apiClient);
+              
+              // 添加认证拦截器
+              apiClient.addInterceptor(
+                AuthInterceptor(
+                  apiClient: apiClient,
+                  authRepository: authRepository,
+                  authSessionProvider: session,
+                  onSessionExpired: () {
+                    // 会话过期时跳转到登录页
+                    _router.go(LoginPage.routePath);
+                    
+                    // 显示提示
+                    final BuildContext? currentContext = _router.routerDelegate.navigatorKey.currentContext;
+                    if (currentContext != null && currentContext.mounted) {
+                      ScaffoldMessenger.of(currentContext).showSnackBar(
+                        const SnackBar(
+                          content: Text('登录已过期，请重新登录'),
+                          duration: Duration(seconds: 3),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              );
+              
+              return authRepository;
+            }
+            
+            return previous;
+          },
         ),
         Provider(
           create: (context) =>
@@ -179,21 +247,104 @@ class _YabaiAppState extends State<YabaiApp> {
         Provider(
           create: (context) => ProjectRepository(context.read<ApiClient>()),
         ),
+        Provider(
+          create: (context) => MyPostsRepository(context.read<ApiClient>()),
+        ),
         ChangeNotifierProvider(create: (_) => LoginFormProvider()),
       ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
-          return MaterialApp.router(
-            debugShowCheckedModeBanner: false,
-            title: '崖柏',
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: themeProvider.themeMode,
-            routerConfig: _router,
-          );
-        },
+      child: _AppInitializer(
+        router: _router,
+        child: Consumer<ThemeProvider>(
+          builder: (context, themeProvider, child) {
+            return MaterialApp.router(
+              debugShowCheckedModeBanner: false,
+              title: '崖柏',
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: themeProvider.themeMode,
+              routerConfig: _router,
+            );
+          },
+        ),
       ),
     );
+  }
+}
+
+/// 应用初始化器：在应用启动时恢复会话
+class _AppInitializer extends StatefulWidget {
+  const _AppInitializer({
+    required this.router,
+    required this.child,
+  });
+
+  final GoRouter router;
+  final Widget child;
+
+  @override
+  State<_AppInitializer> createState() => _AppInitializerState();
+}
+
+class _AppInitializerState extends State<_AppInitializer> {
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    final authSession = context.read<AuthSessionProvider>();
+    final userProfile = context.read<UserProfileProvider>();
+    final authRepository = context.read<AuthRepository>();
+    
+    // 从本地存储恢复会话
+    await authSession.initialize();
+    
+    // 从本地存储恢复用户信息缓存
+    await userProfile.initialize();
+
+    if (!mounted) {
+      return;
+    }
+    
+    // 如果有有效的 token，跳转到首页
+    if (authSession.isAuthenticated) {
+      widget.router.go(HomePage.routePath);
+      return;
+    }
+
+    // 如果 access token 已过期但仍有 refresh token，尝试静默刷新
+    final tokens = authSession.tokens;
+    if (tokens != null && tokens.refreshToken.isNotEmpty) {
+      try {
+        final newTokens = await authRepository.refreshTokens(
+          refreshToken: tokens.refreshToken,
+        );
+
+        await authSession.save(newTokens);
+
+        // 刷新成功后重新拉取用户信息
+        await userProfile.loadProfile();
+
+        if (!mounted) {
+          return;
+        }
+
+        widget.router.go(HomePage.routePath);
+        return;
+      } on AuthException catch (error) {
+        debugPrint('启动时刷新令牌失败: ${error.message}');
+      } catch (error) {
+        debugPrint('启动时刷新令牌异常: $error');
+      }
+
+      await authSession.clear();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }
 

@@ -11,6 +11,7 @@ import 'package:yabai_app/features/home/presentation/widgets/home_header.dart';
 import 'package:yabai_app/features/home/presentation/widgets/search_stats_card.dart';
 import 'package:yabai_app/features/home/providers/home_announcements_provider.dart';
 import 'package:yabai_app/features/home/providers/project_statistics_provider.dart';
+import 'package:yabai_app/features/profile/presentation/pages/profile_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -61,13 +62,12 @@ class _HomePageState extends State<HomePage> {
     if (index == _currentTab) {
       return;
     }
-    setState(() {
-      _currentTab = index;
-    });
-    if (index != 0 && mounted) {
+    setState(() => _currentTab = index);
+
+    if (index != 0 && index != 4 && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('“${_tabLabel(index)}”功能即将上线'),
+          content: Text('"${_tabLabel(index)}"功能即将上线'),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
@@ -78,9 +78,9 @@ class _HomePageState extends State<HomePage> {
   String _tabLabel(int index) {
     switch (index) {
       case 1:
-        return '探索';
+        return '学习';
       case 2:
-        return '工作台';
+        return 'AI';
       case 3:
         return '消息';
       case 4:
@@ -100,83 +100,164 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: isDark
           ? AppColors.darkScaffoldBackground
           : const Color(0xFFF8F9FA),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.pushNamed('create-post').then((result) {
-            // 如果发布成功，刷新列表
-            if (result == true) {
-              announcementsProvider.refresh();
-            }
-          });
-        },
-        backgroundColor: AppColors.brandGreen,
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
-          size: 28,
-        ),
-      ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            final announcements = context.read<HomeAnnouncementsProvider>();
-            final statistics = context.read<ProjectStatisticsProvider>();
-            await Future.wait([announcements.refresh(), statistics.refresh()]);
-          },
-          backgroundColor: isDark ? AppColors.darkCardBackground : Colors.white,
-          color: AppColors.brandGreen,
-          child: CustomScrollView(
-            controller: _scrollController,
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            slivers: [
-              const SliverToBoxAdapter(child: SizedBox(height: 16)),
-              SliverToBoxAdapter(
-                child: HomeHeader(
-                  onOpenDrawer: () {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(const SnackBar(content: Text('侧边栏导航即将推出')));
-                  },
-                  onOpenMessages: () {
-                    _onTapTab(3);
-                  },
-                ),
+      floatingActionButton: _currentTab == 0
+          ? FloatingActionButton(
+              onPressed: () {
+                context.pushNamed('create-post').then((result) {
+                  // 如果发布成功，刷新列表
+                  if (result == true) {
+                    announcementsProvider.refresh();
+                  }
+                });
+              },
+              backgroundColor: AppColors.brandGreen,
+              child: const Icon(
+                Icons.add,
+                color: Colors.white,
+                size: 28,
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
-              SliverToBoxAdapter(
-                child: SearchStatsCard(
-                  stats: _buildStatsItems(statsProvider),
-                  onSubmitted: (value) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('搜索 "$value" 功能即将上线'),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  onTap: () {
-                    context.pushNamed('projects');
-                  },
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
-              ..._buildFeedSlivers(announcementsProvider),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 32),
-                  child: Center(child: _buildFooter(announcementsProvider)),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
-            ],
-          ),
-        ),
+            )
+          : null,
+      body: _buildTabStack(
+        isDark: isDark,
+        announcementsProvider: announcementsProvider,
+        statsProvider: statsProvider,
       ),
       bottomNavigationBar: HomeBottomNav(
         currentIndex: _currentTab,
         onTap: _onTapTab,
+      ),
+    );
+  }
+
+  Widget _buildTabStack({
+    required bool isDark,
+    required HomeAnnouncementsProvider announcementsProvider,
+    required ProjectStatisticsProvider statsProvider,
+  }) {
+    return IndexedStack(
+      index: _currentTab,
+      children: [
+        _buildHomeTab(
+          isDark: isDark,
+          announcementsProvider: announcementsProvider,
+          statsProvider: statsProvider,
+        ),
+        _buildComingSoonTab(
+          title: '学习',
+          description: '"学习"功能即将上线',
+          icon: Icons.menu_book_rounded,
+        ),
+        _buildComingSoonTab(
+          title: 'AI',
+          description: '"AI"功能即将上线',
+          icon: Icons.psychology_alt_outlined,
+        ),
+        _buildComingSoonTab(
+          title: '消息',
+          description: '"消息"功能即将上线',
+          icon: Icons.notifications_none_rounded,
+        ),
+        const ProfilePage(),
+      ],
+    );
+  }
+
+  Widget _buildHomeTab({
+    required bool isDark,
+    required HomeAnnouncementsProvider announcementsProvider,
+    required ProjectStatisticsProvider statsProvider,
+  }) {
+    return SafeArea(
+      child: RefreshIndicator(
+        onRefresh: () async {
+          final announcements = context.read<HomeAnnouncementsProvider>();
+          final statistics = context.read<ProjectStatisticsProvider>();
+          await Future.wait([announcements.refresh(), statistics.refresh()]);
+        },
+        backgroundColor: isDark ? AppColors.darkCardBackground : Colors.white,
+        color: AppColors.brandGreen,
+        child: CustomScrollView(
+          controller: _scrollController,
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
+          slivers: [
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+            SliverToBoxAdapter(
+              child: HomeHeader(
+                onOpenDrawer: () {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('侧边栏导航即将推出')));
+                },
+                onOpenMessages: () {
+                  _onTapTab(3);
+                },
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            SliverToBoxAdapter(
+              child: SearchStatsCard(
+                stats: _buildStatsItems(statsProvider),
+                onSubmitted: (value) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('搜索 "$value" 功能即将上线'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+                onTap: () {
+                  context.pushNamed('projects');
+                },
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            ..._buildFeedSlivers(announcementsProvider),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: Center(child: _buildFooter(announcementsProvider)),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildComingSoonTab({
+    required String title,
+    required String description,
+    required IconData icon,
+  }) {
+    return SafeArea(
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 64,
+              color: AppColors.brandGreen.withValues(alpha: 0.8),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: const TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
       ),
     );
   }

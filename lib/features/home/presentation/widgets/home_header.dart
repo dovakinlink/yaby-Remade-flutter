@@ -11,13 +11,13 @@ class HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     final themeProvider = context.watch<ThemeProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // 左侧菜单按钮
           GestureDetector(
@@ -33,16 +33,6 @@ class HomeHeader extends StatelessWidget {
                 Icons.grid_view_rounded,
                 color: Colors.white,
                 size: 16,
-              ),
-            ),
-          ),
-          // 中间标题
-          Expanded(
-            child: Text(
-              '首页',
-              textAlign: TextAlign.center,
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
               ),
             ),
           ),

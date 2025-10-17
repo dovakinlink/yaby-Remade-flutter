@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/home/data/models/project_file_model.dart';
 import 'package:yabai_app/features/home/presentation/widgets/project_detail/project_detail_section_container.dart';
@@ -54,15 +57,7 @@ class ProjectFilesSection extends StatelessWidget {
     bool isDark,
   ) {
     return InkWell(
-      onTap: () {
-        // TODO: 打开文件查看/下载
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('文件查看功能即将上线: ${file.name}'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      },
+      onTap: () => _handleFileTap(context, file),
       borderRadius: BorderRadius.circular(12),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -194,5 +189,151 @@ class ProjectFilesSection extends StatelessWidget {
     } else {
       return Colors.grey;
     }
+  }
+
+  Future<void> _handleFileTap(
+    BuildContext context,
+    ProjectFileModel file,
+  ) async {
+    if (file.fileUrl.isEmpty) {
+      _showSnack(context, '附件链接不可用');
+      return;
+    }
+
+    final apiClient = context.read<ApiClient>();
+    final resolvedUrl = await apiClient.resolveUrl(file.fileUrl);
+    final authHeaders = apiClient.getAuthHeaders();
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (file.isImage) {
+      await showDialog<void>(
+        context: context,
+        barrierColor: Colors.black.withValues(alpha: 0.72),
+        builder: (_) => _ProjectImagePreviewDialog(
+          imageUrl: resolvedUrl,
+          title: file.name,
+          headers: authHeaders,
+        ),
+      );
+      return;
+    }
+
+    final launchMode = file.isPdf || file.isDocument
+        ? LaunchMode.externalApplication
+        : LaunchMode.platformDefault;
+
+    final uri = Uri.tryParse(resolvedUrl);
+    if (uri == null) {
+      _showSnack(context, '无法识别的附件链接');
+      return;
+    }
+
+    final success = await launchUrl(uri, mode: launchMode);
+    if (!success) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('无法打开附件，请稍后重试 (${file.name})'),
+        ),
+      );
+    }
+  }
+
+  void _showSnack(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+}
+
+class _ProjectImagePreviewDialog extends StatelessWidget {
+  const _ProjectImagePreviewDialog({
+    required this.imageUrl,
+    required this.title,
+    required this.headers,
+  });
+
+  final String imageUrl;
+  final String title;
+  final Map<String, String> headers;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ColoredBox(
+                color: Colors.black.withValues(alpha: 0.86),
+                child: InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 4,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    headers: headers,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) {
+                        return child;
+                      }
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation(
+                            AppColors.brandGreen,
+                          ),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Center(
+                        child: Text(
+                          '图片加载失败',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                color: Colors.black.withValues(alpha: 0.32),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -14,8 +14,8 @@ class HomeBottomNav extends StatelessWidget {
 
   static const _items = <_NavItemData>[
     _NavItemData('assets/icons/tab_home.svg', '首页'),
-    _NavItemData('assets/icons/tab_search.svg', '探索'),
-    _NavItemData('assets/icons/tab_grid.svg', '工作台'),
+    _NavItemData('assets/icons/tab_learn.svg', '学习'),
+    _NavItemData('assets/icons/tab_ai.svg', 'AI'),
     _NavItemData('assets/icons/tab_bell.svg', '消息'),
     _NavItemData('assets/icons/tab_user.svg', '我的'),
   ];
