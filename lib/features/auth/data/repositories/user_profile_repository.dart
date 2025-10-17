@@ -59,5 +59,52 @@ class UserProfileRepository {
       throw ApiException(message: '用户信息数据解析失败: $error');
     }
   }
-}
 
+  /// 修改密码
+  Future<void> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _apiClient.put(
+        '/api/v1/user-profile/change-password',
+        data: {
+          'oldPassword': oldPassword,
+          'newPassword': newPassword,
+        },
+      );
+
+      final body = response.data;
+      if (body == null) {
+        throw ApiException(message: '服务器未返回数据');
+      }
+
+      final apiResponse = ApiResponse<String>.fromJson(
+        body,
+        dataParser: (rawData) => rawData?.toString() ?? '',
+      );
+
+      if (!apiResponse.success) {
+        throw ApiException(
+          message: apiResponse.message,
+          code: apiResponse.code,
+        );
+      }
+    } on DioException catch (error) {
+      final dynamic responseBody = error.response?.data;
+      String? code;
+      String message = '网络请求失败';
+      if (responseBody is Map<String, dynamic>) {
+        code = responseBody['code'] as String?;
+        message = responseBody['message'] as String? ?? message;
+      } else if (error.message != null) {
+        message = error.message!;
+      }
+      throw ApiException(message: message, code: code);
+    } on ApiException {
+      rethrow;
+    } catch (error) {
+      throw ApiException(message: '修改密码失败: $error');
+    }
+  }
+}

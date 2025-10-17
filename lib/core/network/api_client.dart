@@ -40,6 +40,15 @@ class ApiClient {
     return dio.post<Map<String, dynamic>>(path, data: data, options: options);
   }
 
+  Future<Response<Map<String, dynamic>>> put(
+    String path, {
+    Map<String, dynamic>? data,
+    Options? options,
+  }) async {
+    await _ensureBaseUrl();
+    return dio.put<Map<String, dynamic>>(path, data: data, options: options);
+  }
+
   Future<Response<Map<String, dynamic>>> get(
     String path, {
     Map<String, dynamic>? queryParameters,

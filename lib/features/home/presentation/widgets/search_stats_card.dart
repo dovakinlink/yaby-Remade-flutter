@@ -50,7 +50,7 @@ class SearchStatsCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        '食管癌一线治疗有合适的临床项目吗？',
+                        '全局搜索临床试验项目',
                         style: TextStyle(color: Colors.grey[600], fontSize: 14),
                       ),
                     ),

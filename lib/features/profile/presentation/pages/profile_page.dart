@@ -5,9 +5,12 @@ import 'package:provider/provider.dart';
 import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/core/widgets/animated_medical_background.dart';
+import 'package:yabai_app/features/auth/presentation/pages/login_page.dart';
+import 'package:yabai_app/features/auth/providers/auth_session_provider.dart';
 import 'package:yabai_app/features/auth/providers/user_profile_provider.dart';
 import 'package:yabai_app/features/home/presentation/pages/announcement_detail_page.dart';
 import 'package:yabai_app/features/home/presentation/widgets/feed_card.dart';
+import 'package:yabai_app/features/profile/presentation/widgets/change_password_sheet.dart';
 import 'package:yabai_app/features/profile/providers/my_posts_provider.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -24,6 +27,7 @@ class _ProfilePageState extends State<ProfilePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late ScrollController _scrollController;
+  bool _isLoggingOut = false;
 
   @override
   void initState() {
@@ -97,7 +101,7 @@ class _ProfilePageState extends State<ProfilePage>
                 children: [
                   _buildMyPostsTab(),
                   _buildPlaceholderTab('TODO: 我的筛选功能'),
-                  _buildPlaceholderTab('TODO: 设置功能'),
+                  _buildSettingsTab(isDark),
                 ],
               ),
             ),
@@ -269,6 +273,190 @@ class _ProfilePageState extends State<ProfilePage>
         ),
       ),
     );
+  }
+
+  Widget _buildSettingsTab(bool isDark) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      children: [
+        _buildSettingsItem(
+          icon: Icons.lock_reset_rounded,
+          iconColor: AppColors.brandGreen,
+          iconBackground: AppColors.brandGreen.withValues(alpha: 0.12),
+          title: '修改密码',
+          subtitle: '建议定期更新密码提升账户安全',
+          onTap: _openChangePasswordSheet,
+          isDark: isDark,
+        ),
+        const SizedBox(height: 16),
+        _buildSettingsItem(
+          icon: Icons.logout_rounded,
+          iconColor: Colors.redAccent,
+          iconBackground: Colors.redAccent.withValues(alpha: 0.12),
+          title: '退出登录',
+          subtitle: '退出后需要重新登录',
+          onTap: _confirmLogout,
+          isDark: isDark,
+          isDestructive: true,
+          showLoader: _isLoggingOut,
+        ),
+        SizedBox(height: MediaQuery.of(context).padding.bottom + 32),
+      ],
+    );
+  }
+
+  Widget _buildSettingsItem({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBackground,
+    required String title,
+    String? subtitle,
+    required VoidCallback onTap,
+    required bool isDark,
+    bool isDestructive = false,
+    bool showLoader = false,
+  }) {
+    final tileColor = isDark ? AppColors.darkCardBackground : Colors.white;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: tileColor,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                  blurRadius: 16,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: ListTile(
+          leading: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: iconBackground,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: iconColor, size: 22),
+        ),
+          title: Text(
+            title,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: isDestructive
+                      ? (isDark ? Colors.red.shade200 : Colors.redAccent)
+                      : null,
+                ),
+          ),
+          subtitle: subtitle != null
+              ? Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: isDark
+                            ? AppColors.darkSecondaryText
+                            : const Color(0xFF6B7280),
+                      ),
+                )
+              : null,
+          trailing: showLoader
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Icon(
+                  Icons.chevron_right_rounded,
+                  color: isDestructive
+                      ? (isDark ? Colors.red.shade200 : Colors.redAccent)
+                      : (isDark ? Colors.white70 : const Color(0xFF94A3B8)),
+                ),
+          onTap: showLoader ? null : onTap,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openChangePasswordSheet() async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const ChangePasswordSheet(),
+    );
+
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('密码修改成功')),
+      );
+    }
+  }
+
+  Future<void> _confirmLogout() async {
+    if (_isLoggingOut) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('退出登录'),
+        content: const Text('确定要退出当前账号吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(
+              '退出',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _performLogout();
+    }
+  }
+
+  Future<void> _performLogout() async {
+    setState(() {
+      _isLoggingOut = true;
+    });
+
+    final authSession = context.read<AuthSessionProvider>();
+    final userProfile = context.read<UserProfileProvider>();
+    final myPosts = context.read<MyPostsProvider>();
+
+    try {
+      await authSession.clear();
+      await userProfile.clear();
+      myPosts.clear();
+
+      if (!mounted) return;
+      context.go(LoginPage.routePath);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('退出登录失败，请稍后重试')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoggingOut = false;
+        });
+      }
+    }
   }
 
   Widget _buildMyPostsTab() {

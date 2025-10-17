@@ -94,5 +94,14 @@ class UserProfileProvider extends ChangeNotifier {
   Future<void> refresh() async {
     await loadProfile();
   }
-}
 
+  Future<void> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) {
+    return _repository.changePassword(
+      oldPassword: oldPassword,
+      newPassword: newPassword,
+    );
+  }
+}

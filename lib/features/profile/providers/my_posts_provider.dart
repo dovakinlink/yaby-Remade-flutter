@@ -77,6 +77,16 @@ class MyPostsProvider extends ChangeNotifier {
     await loadInitial();
   }
 
+  /// 清除缓存数据
+  void clear() {
+    _posts = [];
+    _currentPage = 0;
+    _hasNext = false;
+    _errorMessage = null;
+    _loadMoreError = null;
+    notifyListeners();
+  }
+
   /// 根据ID查找公告
   AnnouncementModel? findById(int id) {
     try {
@@ -86,4 +96,3 @@ class MyPostsProvider extends ChangeNotifier {
     }
   }
 }
-
