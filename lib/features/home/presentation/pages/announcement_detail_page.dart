@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:go_router/go_router.dart';
@@ -6,8 +7,11 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/home/data/models/announcement_model.dart';
+import 'package:yabai_app/features/home/providers/comment_list_provider.dart';
+import 'package:yabai_app/features/home/presentation/widgets/comment_card.dart';
+import 'package:yabai_app/features/home/presentation/widgets/comment_input_bar.dart';
 
-class AnnouncementDetailPage extends StatelessWidget {
+class AnnouncementDetailPage extends StatefulWidget {
   const AnnouncementDetailPage({super.key, required this.announcement});
 
   static const routePath = '/home/announcement/:id';
@@ -24,13 +28,51 @@ class AnnouncementDetailPage extends StatelessWidget {
   }
 
   @override
+  State<AnnouncementDetailPage> createState() => _AnnouncementDetailPageState();
+}
+
+class _AnnouncementDetailPageState extends State<AnnouncementDetailPage> {
+  bool _showComments = false;
+  late TextEditingController _commentController;
+  late ScrollController _commentScrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _commentController = TextEditingController();
+    _commentScrollController = ScrollController();
+    _commentScrollController.addListener(_handleCommentScroll);
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    _commentScrollController
+      ..removeListener(_handleCommentScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleCommentScroll() {
+    if (!_commentScrollController.hasClients) return;
+
+    final provider = context.read<CommentListProvider>();
+    if (!provider.hasNext || provider.isLoadingMore) return;
+
+    final position = _commentScrollController.position;
+    if (position.pixels >= position.maxScrollExtent * 0.9) {
+      unawaited(provider.loadMore());
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final organizationName = announcement.organizationDisplayName ?? '通知公告';
+    final organizationName = widget.announcement.organizationDisplayName ?? '通知公告';
     final contentHtml =
-        announcement.contentHtml ??
-        (announcement.displayContent.isNotEmpty
-            ? '<p>${announcement.displayContent}</p>'
+        widget.announcement.contentHtml ??
+        (widget.announcement.displayContent.isNotEmpty
+            ? '<p>${widget.announcement.displayContent}</p>'
             : '<p>暂无内容</p>');
 
     // 底色
@@ -49,15 +91,16 @@ class AnnouncementDetailPage extends StatelessWidget {
         child: Column(
           children: [
             _HeaderBar(title: '通知公告'),
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  color: cardColor,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
+            if (!_showComments)
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    color: cardColor,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                       // 标题区域
                       Padding(
                         padding: const EdgeInsets.all(20),
@@ -65,13 +108,13 @@ class AnnouncementDetailPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // 用户帖子显示发帖人信息
-                            if (announcement.isUserPost && 
-                                announcement.publisherName != null) ...[
+                            if (widget.announcement.isUserPost && 
+                                widget.announcement.publisherName != null) ...[
                               Row(
                                 children: [
                                   _UserAvatar(
-                                    avatarUrl: announcement.publisherAvatarUrl,
-                                    userName: announcement.publisherName!,
+                                    avatarUrl: widget.announcement.publisherAvatarUrl,
+                                    userName: widget.announcement.publisherName!,
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -79,7 +122,7 @@ class AnnouncementDetailPage extends StatelessWidget {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          announcement.publisherName!,
+                                          widget.announcement.publisherName!,
                                           style: Theme.of(context)
                                               .textTheme
                                               .bodyLarge
@@ -92,7 +135,7 @@ class AnnouncementDetailPage extends StatelessWidget {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          announcement.publishedLabel,
+                                          widget.announcement.publishedLabel,
                                           style: Theme.of(context)
                                               .textTheme
                                               .bodySmall
@@ -110,7 +153,7 @@ class AnnouncementDetailPage extends StatelessWidget {
                               const SizedBox(height: 16),
                             ],
                             Text(
-                              announcement.title,
+                              widget.announcement.title,
                               style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(
                                     fontSize: 20,
@@ -124,22 +167,22 @@ class AnnouncementDetailPage extends StatelessWidget {
                               spacing: 12,
                               runSpacing: 8,
                               children: [
-                                if (announcement.isTop)
+                                if (widget.announcement.isTop)
                                   const _TagChip(
                                     label: '置顶',
                                     backgroundColor: Color(0xFFFFF2ED),
                                     textColor: Color(0xFFB42318),
                                   ),
                                 // 用户帖子显示标签名称，官方公告显示类型
-                                if (announcement.isUserPost && announcement.tagName != null)
+                                if (widget.announcement.isUserPost && widget.announcement.tagName != null)
                                   _TagChip(
-                                    label: announcement.tagName!,
+                                    label: widget.announcement.tagName!,
                                     backgroundColor: const Color(0xFFFFE8E8), // 浅红色背景
                                     textColor: const Color(0xFFE53935), // 红色文字
                                   )
-                                else if (announcement.isOfficial)
+                                else if (widget.announcement.isOfficial)
                                   _TagChip(
-                                    label: announcement.noticeTypeLabel,
+                                    label: widget.announcement.noticeTypeLabel,
                                     backgroundColor: AppColors.brandGreen
                                         .withValues(alpha: 0.14),
                                     textColor: AppColors.brandGreen,
@@ -147,10 +190,10 @@ class AnnouncementDetailPage extends StatelessWidget {
                               ],
                             ),
                             // 官方公告显示发布时间
-                            if (!announcement.isUserPost) ...[
+                            if (!widget.announcement.isUserPost) ...[
                               const SizedBox(height: 12),
                               Text(
-                                announcement.publishedLabel,
+                                widget.announcement.publishedLabel,
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: isDark 
                                       ? AppColors.darkSecondaryText 
@@ -265,7 +308,7 @@ class AnnouncementDetailPage extends StatelessWidget {
                       ),
                       
                       // 附件区域
-                      if (announcement.attachments.isNotEmpty) ...[
+                      if (widget.announcement.attachments.isNotEmpty) ...[
                         // 分割条
                         Container(
                           height: 4,
@@ -277,19 +320,298 @@ class AnnouncementDetailPage extends StatelessWidget {
                             vertical: 24,
                           ),
                           child: _AttachmentsContent(
-                            attachments: announcement.attachments,
+                            attachments: widget.announcement.attachments,
                           ),
                         ),
+                      ],
+                      
+                      // 评论入口（只有用户帖子才显示）
+                      if (widget.announcement.isUserPost) ...[
+                        Container(height: 4, color: backgroundColor),
+                        _buildCommentBar(context, isDark),
                       ],
                     ],
                   ),
                 ),
               ),
             ),
+            
+            // 评论区域（展开后显示）
+            if (_showComments && widget.announcement.isUserPost)
+              Expanded(
+                child: _buildCommentSection(context, isDark, cardColor),
+              ),
           ],
         ),
       ),
     );
+  }
+  
+  Widget _buildCommentBar(BuildContext context, bool isDark) {
+    final provider = context.watch<CommentListProvider>();
+    
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _showComments = true;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        color: isDark ? AppColors.darkCardBackground : Colors.white,
+        child: Row(
+          children: [
+            Icon(Icons.comment_outlined, color: AppColors.brandGreen, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              '评论 (${provider.commentCount})',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isDark ? AppColors.darkNeutralText : Colors.black87,
+              ),
+            ),
+            const Spacer(),
+            Icon(
+              Icons.chevron_right,
+              color: isDark ? AppColors.darkSecondaryText : Colors.grey[400],
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildCommentSection(BuildContext context, bool isDark, Color cardColor) {
+    final provider = context.watch<CommentListProvider>();
+    
+    return Container(
+      color: isDark ? AppColors.darkScaffoldBackground : const Color(0xFFF8F9FA),
+      child: Column(
+        children: [
+          // 标题栏
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: cardColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Text(
+                  '评论 (${provider.commentCount})',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.darkNeutralText : Colors.black87,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _showComments = false;
+                      provider.cancelReply();
+                    });
+                  },
+                  icon: const Icon(Icons.close),
+                  color: isDark ? AppColors.darkSecondaryText : Colors.grey[600],
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          ),
+          
+          // 评论列表
+          Expanded(
+            child: _buildCommentList(provider, isDark),
+          ),
+          
+          // 输入框
+          CommentInputBar(
+            controller: _commentController,
+            replyingTo: provider.replyingTo,
+            onCancelReply: () => provider.cancelReply(),
+            onSubmit: () => _submitComment(provider),
+            isSubmitting: provider.isSubmitting,
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildCommentList(CommentListProvider provider, bool isDark) {
+    if (provider.isLoading && provider.comments.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation(AppColors.brandGreen),
+        ),
+      );
+    }
+    
+    if (provider.errorMessage != null && provider.comments.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              provider.errorMessage!,
+              style: TextStyle(color: isDark ? AppColors.darkSecondaryText : Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => provider.refresh(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.brandGreen,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('重试'),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    if (provider.comments.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.comment_outlined, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              '暂无评论',
+              style: TextStyle(
+                fontSize: 16,
+                color: isDark ? AppColors.darkSecondaryText : Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '快来发表第一条评论吧',
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? AppColors.darkSecondaryText : Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return ListView.builder(
+      controller: _commentScrollController,
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: provider.comments.length + (provider.hasNext ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index == provider.comments.length) {
+          // 加载更多指示器
+          if (provider.isLoadingMore) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(AppColors.brandGreen),
+                  ),
+                ),
+              ),
+            );
+          }
+          return const SizedBox.shrink();
+        }
+        
+        final comment = provider.comments[index];
+        return CommentCard(
+          comment: comment,
+          onReply: () => provider.setReplyingTo(comment),
+          onDelete: comment.canDelete
+              ? () => _deleteComment(context, provider, comment.id)
+              : null,
+        );
+      },
+    );
+  }
+  
+  Future<void> _submitComment(CommentListProvider provider) async {
+    final content = _commentController.text.trim();
+    if (content.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('评论内容不能为空')),
+      );
+      return;
+    }
+    
+    final success = await provider.createComment(content);
+    if (success) {
+      _commentController.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('评论成功')),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('评论失败，请重试')),
+        );
+      }
+    }
+  }
+  
+  Future<void> _deleteComment(
+    BuildContext context,
+    CommentListProvider provider,
+    int commentId,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('确定要删除这条评论吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed == true) {
+      final success = await provider.deleteComment(commentId);
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('删除成功')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('删除失败，请重试')),
+          );
+        }
+      }
+    }
   }
 }
 

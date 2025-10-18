@@ -14,6 +14,7 @@ import 'package:yabai_app/features/auth/providers/user_profile_provider.dart';
 import 'package:yabai_app/features/auth/presentation/pages/login_page.dart';
 import 'package:yabai_app/features/home/data/models/announcement_model.dart';
 import 'package:yabai_app/features/home/data/repositories/announcement_repository.dart';
+import 'package:yabai_app/features/home/data/repositories/comment_repository.dart';
 import 'package:yabai_app/features/home/data/repositories/post_repository.dart';
 import 'package:yabai_app/features/home/data/repositories/project_repository.dart';
 import 'package:yabai_app/features/home/data/repositories/project_statistics_repository.dart';
@@ -22,6 +23,7 @@ import 'package:yabai_app/features/home/presentation/pages/create_post_page.dart
 import 'package:yabai_app/features/home/presentation/pages/home_page.dart';
 import 'package:yabai_app/features/home/presentation/pages/project_detail_page.dart';
 import 'package:yabai_app/features/home/presentation/pages/project_list_page.dart';
+import 'package:yabai_app/features/home/providers/comment_list_provider.dart';
 import 'package:yabai_app/features/home/providers/create_post_provider.dart';
 import 'package:yabai_app/features/home/providers/home_announcements_provider.dart';
 import 'package:yabai_app/features/home/providers/project_detail_provider.dart';
@@ -110,7 +112,16 @@ class _YabaiAppState extends State<YabaiApp> {
                   return const _AnnouncementMissingPage();
                 }
 
-                return AnnouncementDetailPage(announcement: announcement);
+                // 确保 announcement 非 null
+                final validAnnouncement = announcement;
+                
+                return ChangeNotifierProvider(
+                  create: (context) => CommentListProvider(
+                    context.read<CommentRepository>(),
+                    noticeId: validAnnouncement.id,
+                  )..loadInitial(),
+                  child: AnnouncementDetailPage(announcement: validAnnouncement),
+                );
               },
             ),
             GoRoute(
@@ -300,6 +311,9 @@ class _YabaiAppState extends State<YabaiApp> {
         ),
         Provider(
           create: (context) => MyPostsRepository(context.read<ApiClient>()),
+        ),
+        Provider(
+          create: (context) => CommentRepository(context.read<ApiClient>()),
         ),
         Provider(
           create: (context) => LearningResourceRepository(context.read<ApiClient>()),

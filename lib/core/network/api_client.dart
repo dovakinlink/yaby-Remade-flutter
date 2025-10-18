@@ -62,6 +62,21 @@ class ApiClient {
     );
   }
 
+  Future<Response<Map<String, dynamic>>> delete(
+    String path, {
+    Map<String, dynamic>? data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    await _ensureBaseUrl();
+    return dio.delete<Map<String, dynamic>>(
+      path,
+      data: data,
+      queryParameters: queryParameters,
+      options: options,
+    );
+  }
+
   void updateAuthToken(String? token) {
     _authToken = token;
     final headers = <String, dynamic>{...dio.options.headers};
