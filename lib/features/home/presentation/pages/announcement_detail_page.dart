@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_html/flutter_html.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -68,7 +68,6 @@ class _AnnouncementDetailPageState extends State<AnnouncementDetailPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final organizationName = widget.announcement.organizationDisplayName ?? '通知公告';
     final contentHtml =
         widget.announcement.contentHtml ??
         (widget.announcement.displayContent.isNotEmpty
@@ -212,99 +211,9 @@ class _AnnouncementDetailPageState extends State<AnnouncementDetailPage> {
                       ),
                       
                       // 内容区域
-                      Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Html(
-                          data: contentHtml,
-                          style: {
-                            'body': Style(
-                              fontSize: FontSize(16),
-                              color: isDark 
-                                  ? AppColors.darkNeutralText 
-                                  : const Color(0xFF1F2937),
-                              lineHeight: const LineHeight(1.6),
-                              margin: Margins.zero,
-                              padding: HtmlPaddings.zero,
-                            ),
-                            'h1': Style(
-                              fontSize: FontSize(24),
-                              fontWeight: FontWeight.w700,
-                              color: isDark 
-                                  ? AppColors.darkNeutralText 
-                                  : const Color(0xFF1F2937),
-                              margin: Margins.only(bottom: 16),
-                            ),
-                            'h2': Style(
-                              fontSize: FontSize(20),
-                              fontWeight: FontWeight.w700,
-                              color: isDark 
-                                  ? AppColors.darkNeutralText 
-                                  : const Color(0xFF1F2937),
-                              margin: Margins.only(bottom: 12),
-                              textAlign: TextAlign.center,
-                            ),
-                            'h3': Style(
-                              fontSize: FontSize(18),
-                              fontWeight: FontWeight.w600,
-                              color: isDark 
-                                  ? AppColors.darkNeutralText 
-                                  : const Color(0xFF1F2937),
-                              margin: Margins.only(bottom: 10),
-                            ),
-                            'p': Style(
-                              margin: Margins.symmetric(vertical: 8),
-                              fontSize: FontSize(16),
-                              color: isDark 
-                                  ? AppColors.darkNeutralText 
-                                  : const Color(0xFF1F2937),
-                              lineHeight: const LineHeight(1.6),
-                            ),
-                            'ol': Style(
-                              margin: Margins.only(left: 20, top: 8, bottom: 8),
-                              padding: HtmlPaddings.zero,
-                            ),
-                            'ul': Style(
-                              margin: Margins.only(left: 20, top: 8, bottom: 8),
-                              padding: HtmlPaddings.zero,
-                            ),
-                            'li': Style(
-                              margin: Margins.only(bottom: 4),
-                              fontSize: FontSize(16),
-                              color: isDark 
-                                  ? AppColors.darkNeutralText 
-                                  : const Color(0xFF1F2937),
-                              lineHeight: const LineHeight(1.6),
-                            ),
-                            'strong': Style(
-                              fontWeight: FontWeight.w700,
-                              color: isDark 
-                                  ? AppColors.darkNeutralText 
-                                  : const Color(0xFF1F2937),
-                            ),
-                            'b': Style(
-                              fontWeight: FontWeight.w700,
-                              color: isDark 
-                                  ? AppColors.darkNeutralText 
-                                  : const Color(0xFF1F2937),
-                            ),
-                            'a': Style(
-                              color: AppColors.brandGreen,
-                              textDecoration: TextDecoration.underline,
-                            ),
-                            'img': Style(
-                              width: Width(100),
-                              margin: Margins.symmetric(vertical: 8),
-                            ),
-                          },
-                          onLinkTap: (url, attributes, element) {
-                            if (url == null) {
-                              return;
-                            }
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('即将打开: $url')),
-                            );
-                          },
-                        ),
+                      _HtmlContentView(
+                        htmlContent: contentHtml,
+                        isDark: isDark,
                       ),
                       
                       // 附件区域
@@ -1122,6 +1031,199 @@ class _ImagePreviewDialog extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _HtmlContentView extends StatefulWidget {
+  const _HtmlContentView({
+    required this.htmlContent,
+    required this.isDark,
+  });
+
+  final String htmlContent;
+  final bool isDark;
+
+  @override
+  State<_HtmlContentView> createState() => _HtmlContentViewState();
+}
+
+class _HtmlContentViewState extends State<_HtmlContentView> {
+  WebViewController? _controller;
+  double _webViewHeight = 400; // 默认高度
+  bool _isDisposed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeWebView();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  void _initializeWebView() {
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onNavigationRequest: (request) {
+            if (_isDisposed) return NavigationDecision.prevent;
+            
+            // 拦截外部链接
+            if (request.url.startsWith('http')) {
+              if (mounted && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('即将打开: ${request.url}')),
+                );
+              }
+              return NavigationDecision.prevent;
+            }
+            return NavigationDecision.navigate;
+          },
+        ),
+      )
+      ..loadHtmlString(_buildHtmlPage());
+
+    // 获取内容高度
+    _updateHeight();
+  }
+
+  Future<void> _updateHeight() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (_isDisposed || !mounted) return;
+
+    try {
+      if (_controller == null) return;
+      
+      final heightString = await _controller!.runJavaScriptReturningResult(
+        'document.documentElement.scrollHeight',
+      );
+      final height = double.tryParse(heightString.toString()) ?? 400;
+      
+      if (!_isDisposed && mounted) {
+        setState(() {
+          _webViewHeight = height + 20; // 添加一些额外空间
+        });
+      }
+    } catch (e) {
+      debugPrint('获取WebView高度失败: $e');
+    }
+  }
+
+  String _buildHtmlPage() {
+    final textColor = widget.isDark ? '#F8F9FA' : '#1F2937';
+    final backgroundColor = widget.isDark ? '#333333' : '#FFFFFF';
+    final linkColor = '#36CAC4'; // AppColors.brandGreen
+
+    return '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      color: $textColor;
+      background-color: $backgroundColor;
+      padding: 20px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: $textColor;
+    }
+    
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      text-align: center;
+      color: $textColor;
+    }
+    
+    h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: $textColor;
+    }
+    
+    p {
+      margin: 8px 0;
+      font-size: 16px;
+      line-height: 1.6;
+      color: $textColor;
+    }
+    
+    ol, ul {
+      margin: 8px 0 8px 20px;
+      padding: 0;
+    }
+    
+    li {
+      margin-bottom: 4px;
+      font-size: 16px;
+      line-height: 1.6;
+      color: $textColor;
+    }
+    
+    strong, b {
+      font-weight: 700;
+      color: $textColor;
+    }
+    
+    a {
+      color: $linkColor;
+      text-decoration: underline;
+    }
+    
+    img {
+      max-width: 100%;
+      height: auto;
+      margin: 8px 0;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  ${widget.htmlContent}
+</body>
+</html>
+''';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_controller == null) {
+      return SizedBox(
+        height: 100,
+        child: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation(AppColors.brandGreen),
+          ),
+        ),
+      );
+    }
+    
+    return SizedBox(
+      height: _webViewHeight,
+      child: WebViewWidget(controller: _controller!),
     );
   }
 }
