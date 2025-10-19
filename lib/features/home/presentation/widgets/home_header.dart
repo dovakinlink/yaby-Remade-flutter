@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/core/providers/theme_provider.dart';
+import 'package:yabai_app/features/messages/providers/message_unread_count_provider.dart';
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({super.key, this.onOpenDrawer, this.onOpenMessages});
@@ -61,56 +62,41 @@ class HomeHeader extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               // 消息按钮
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  GestureDetector(
-                    onTap: onOpenMessages,
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkNeutralText : Colors.black,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.chat_bubble_outline_rounded,
-                        color: isDark ? AppColors.darkScaffoldBackground : Colors.white,
-                        size: 14,
+              Consumer<MessageUnreadCountProvider>(
+                builder: (context, provider, child) {
+                  final unreadCount = provider.unreadCount;
+
+                  return Badge(
+                    isLabelVisible: unreadCount > 0,
+                    label: Text(
+                      provider.badgeText,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ),
-                  // 消息数字标记
-                  Positioned(
-                    top: -8,
-                    right: -8,
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkScaffoldBackground : Colors.white,
-                        shape: BoxShape.circle,
-                      ),
+                    alignment: AlignmentDirectional.topEnd,
+                    offset: const Offset(4, -4),
+                    backgroundColor: const Color(0xFFEF4444),
+                    child: GestureDetector(
+                      onTap: onOpenMessages,
                       child: Container(
-                        margin: const EdgeInsets.all(1),
-                        decoration: const BoxDecoration(
-                          color: AppColors.brandGreen,
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.darkNeutralText : Colors.black,
                           shape: BoxShape.circle,
                         ),
-                        child: const Center(
-                          child: Text(
-                            '2',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                        child: Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          color: isDark ? AppColors.darkScaffoldBackground : Colors.white,
+                          size: 16,
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  );
+                },
               ),
             ],
           ),

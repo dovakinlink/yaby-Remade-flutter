@@ -69,6 +69,15 @@ class _MessageListPageState extends State<MessageListPage> {
       backgroundColor: isDark 
           ? AppColors.darkScaffoldBackground 
           : const Color(0xFFF8F9FA),
+      appBar: AppBar(
+        automaticallyImplyLeading: Navigator.of(context).canPop(),
+        title: const Text('消息中心'),
+        backgroundColor: isDark
+            ? AppColors.darkScaffoldBackground
+            : const Color(0xFFF8F9FA),
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+      ),
       body: SafeArea(
         child: Consumer<MessageListProvider>(
           builder: (context, provider, child) {

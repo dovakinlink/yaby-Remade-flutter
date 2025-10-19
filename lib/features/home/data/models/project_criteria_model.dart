@@ -1,16 +1,19 @@
 class ProjectCriteriaModel {
   const ProjectCriteriaModel({
+    required this.id,
     required this.itemNo,
     required this.itemType,
     required this.content,
   });
 
+  final int id;
   final int itemNo;
   final String itemType; // IN=入组, EX=排除
   final String content;
 
   factory ProjectCriteriaModel.fromJson(Map<String, dynamic> json) {
     return ProjectCriteriaModel(
+      id: json['id'] as int,
       itemNo: json['itemNo'] as int,
       itemType: json['itemType'] as String,
       content: json['content'] as String,

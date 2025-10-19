@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/messages/data/models/message_model.dart';
@@ -160,7 +161,7 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 发送人
+              // 发送人和项目名称（筛查消息）
               Text(
                 message.fromUserName,
                 style: TextStyle(
@@ -171,6 +172,18 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
                       : AppColors.lightNeutralText,
                 ),
               ),
+              if (message.iconType == 'screening' && message.projectName != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  message.projectName!,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark 
+                        ? AppColors.darkSecondaryText 
+                        : const Color(0xFF6B7280),
+                  ),
+                ),
+              ],
               const SizedBox(height: 4),
               
               // 操作类型和时间
@@ -214,31 +227,29 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
 
   Widget _buildMessageIcon(Message message, bool isDark) {
     IconData iconData;
-    Color backgroundColor;
     Color iconColor;
     
-    switch (message.category) {
-      case 'NOTICE_COMMENT':
-        iconData = Icons.comment_outlined;
-        backgroundColor = AppColors.brandGreen.withValues(alpha: 0.1);
-        iconColor = AppColors.brandGreen;
+    switch (message.iconType) {
+      case 'screening':
+        iconData = Icons.assignment;
+        iconColor = const Color(0xFF8B5CF6); // 紫色
         break;
-      case 'COMMENT_REPLY':
-        iconData = Icons.reply_outlined;
-        backgroundColor = Colors.blue.withValues(alpha: 0.1);
-        iconColor = Colors.blue;
+      case 'comment':
+        iconData = message.category == 'COMMENT_REPLY' 
+            ? Icons.reply_outlined 
+            : Icons.comment_outlined;
+        iconColor = AppColors.brandGreen;
         break;
       default:
         iconData = Icons.notifications_outlined;
-        backgroundColor = Colors.grey.withValues(alpha: 0.1);
-        iconColor = Colors.grey[600]!;
+        iconColor = const Color(0xFF3B82F6);
     }
 
     return Container(
       width: 50,
       height: 50,
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: iconColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(25),
       ),
       child: Icon(
@@ -295,7 +306,72 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
             ),
           ),
         ),
+        
+        // 查看详情按钮
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: () => _handleNavigateToResource(message),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.brandGreen,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              _getNavigationButtonText(message),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
       ],
     );
+  }
+
+  String _getNavigationButtonText(Message message) {
+    if (message.iconType == 'screening') {
+      return '查看筛查详情';
+    } else if (message.iconType == 'comment') {
+      return '查看帖子详情';
+    }
+    return '查看详情';
+  }
+
+  void _handleNavigateToResource(Message message) {
+    if (message.category.startsWith('SCREENING')) {
+      // 跳转到筛查详情页
+      final screeningId = message.screeningId;
+      if (screeningId != null) {
+        context.pushNamed(
+          'screening-detail',
+          pathParameters: {'screeningId': screeningId.toString()},
+        );
+      }
+    } else if (message.category.contains('COMMENT')) {
+      // 现有的评论跳转逻辑
+      _navigateToNotice(message);
+    }
+  }
+
+  void _navigateToNotice(Message message) {
+    final noticeId = message.noticeId;
+    if (noticeId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('帖子已被删除'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    // 跳转到帖子详情页
+    context.push('/home/feeds/$noticeId');
   }
 }

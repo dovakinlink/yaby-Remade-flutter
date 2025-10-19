@@ -16,9 +16,10 @@ import 'package:yabai_app/features/profile/presentation/pages/profile_page.dart'
 import 'package:yabai_app/features/learning/data/models/learning_resource_model.dart';
 import 'package:yabai_app/features/learning/presentation/pages/learning_resource_detail_page.dart';
 import 'package:yabai_app/features/learning/providers/learning_resource_list_provider.dart';
-import 'package:yabai_app/features/messages/data/repositories/message_repository.dart';
-import 'package:yabai_app/features/messages/providers/message_list_provider.dart';
 import 'package:yabai_app/features/messages/presentation/pages/message_list_page.dart';
+import 'package:yabai_app/features/screening/data/repositories/screening_repository.dart';
+import 'package:yabai_app/features/screening/providers/screening_list_provider.dart';
+import 'package:yabai_app/features/screening/presentation/pages/screening_list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -88,7 +89,7 @@ class _HomePageState extends State<HomePage> {
       case 2:
         return 'AI';
       case 3:
-        return '消息';
+        return '筛查';
       case 4:
         return '我的';
       default:
@@ -155,7 +156,7 @@ class _HomePageState extends State<HomePage> {
           description: '"AI"功能即将上线',
           icon: Icons.psychology_alt_outlined,
         ),
-        _buildMessageTab(),
+        _buildScreeningTab(),
         const ProfilePage(),
       ],
     );
@@ -190,7 +191,7 @@ class _HomePageState extends State<HomePage> {
                   ).showSnackBar(const SnackBar(content: Text('侧边栏导航即将推出')));
                 },
                 onOpenMessages: () {
-                  _onTapTab(3);
+                  context.goNamed(MessageListPage.routeName);
                 },
               ),
             ),
@@ -230,12 +231,12 @@ class _HomePageState extends State<HomePage> {
     return const _LearningTabView();
   }
 
-  Widget _buildMessageTab() {
+  Widget _buildScreeningTab() {
     return ChangeNotifierProvider(
-      create: (context) => MessageListProvider(
-        context.read<MessageRepository>(),
-      ),
-      child: const MessageListPage(),
+      create: (context) => ScreeningListProvider(
+        context.read<ScreeningRepository>(),
+      )..loadInitial(),
+      child: const ScreeningListPage(),
     );
   }
 

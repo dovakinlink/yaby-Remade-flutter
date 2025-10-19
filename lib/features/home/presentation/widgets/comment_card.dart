@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/home/data/models/comment_model.dart';
+import 'package:yabai_app/features/profile/presentation/pages/user_profile_detail_page.dart';
 
 class CommentCard extends StatelessWidget {
   final Comment comment;
@@ -123,45 +125,53 @@ class CommentCard extends StatelessWidget {
         ? apiClient.resolveUrlSync(avatarUrl)
         : null;
     
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: AppColors.brandGreen.withValues(alpha: 0.1),
-        shape: BoxShape.circle,
-      ),
-      child: resolvedUrl != null
-          ? ClipOval(
-              child: Image.network(
-                resolvedUrl,
-                width: 36,
-                height: 36,
-                fit: BoxFit.cover,
-                headers: apiClient.getAuthHeaders(),
-                errorBuilder: (context, error, stackTrace) {
-                  return Center(
-                    child: Text(
-                      comment.nameInitial,
-                      style: const TextStyle(
-                        color: AppColors.brandGreen,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+    return GestureDetector(
+      onTap: () {
+        context.pushNamed(
+          UserProfileDetailPage.routeName,
+          pathParameters: {'userId': comment.commenterId.toString()},
+        );
+      },
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: AppColors.brandGreen.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+        ),
+        child: resolvedUrl != null
+            ? ClipOval(
+                child: Image.network(
+                  resolvedUrl,
+                  width: 36,
+                  height: 36,
+                  fit: BoxFit.cover,
+                  headers: apiClient.getAuthHeaders(),
+                  errorBuilder: (context, error, stackTrace) {
+                    return Center(
+                      child: Text(
+                        comment.nameInitial,
+                        style: const TextStyle(
+                          color: AppColors.brandGreen,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  );
-                },
-              ),
-            )
-          : Center(
-              child: Text(
-                comment.nameInitial,
-                style: const TextStyle(
-                  color: AppColors.brandGreen,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                    );
+                  },
+                ),
+              )
+            : Center(
+                child: Text(
+                  comment.nameInitial,
+                  style: const TextStyle(
+                    color: AppColors.brandGreen,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
+      ),
     );
   }
 }

@@ -29,6 +29,12 @@ import 'package:yabai_app/features/home/providers/home_announcements_provider.da
 import 'package:yabai_app/features/home/providers/project_detail_provider.dart';
 import 'package:yabai_app/features/home/providers/project_list_provider.dart';
 import 'package:yabai_app/features/home/providers/project_statistics_provider.dart';
+import 'package:yabai_app/features/screening/data/repositories/screening_repository.dart';
+import 'package:yabai_app/features/screening/presentation/pages/screening_detail_page.dart';
+import 'package:yabai_app/features/screening/presentation/pages/screening_submit_page.dart';
+import 'package:yabai_app/features/screening/providers/screening_detail_provider.dart';
+import 'package:yabai_app/features/screening/providers/screening_submit_provider.dart';
+import 'package:yabai_app/features/home/data/models/project_criteria_model.dart';
 import 'package:yabai_app/features/profile/data/repositories/my_posts_repository.dart';
 import 'package:yabai_app/features/profile/providers/my_posts_provider.dart';
 import 'package:yabai_app/features/profile/presentation/pages/profile_page.dart';
@@ -45,6 +51,8 @@ import 'package:yabai_app/features/messages/providers/message_list_provider.dart
 import 'package:yabai_app/features/messages/providers/message_detail_provider.dart';
 import 'package:yabai_app/features/messages/presentation/pages/message_list_page.dart';
 import 'package:yabai_app/features/messages/presentation/pages/message_detail_page.dart';
+import 'package:yabai_app/features/profile/providers/user_profile_detail_provider.dart';
+import 'package:yabai_app/features/profile/presentation/pages/user_profile_detail_page.dart';
 
 class YabaiApp extends StatefulWidget {
   const YabaiApp({super.key});
@@ -176,6 +184,39 @@ class _YabaiAppState extends State<YabaiApp> {
                       child: ProjectDetailPage(projectId: id),
                     );
                   },
+                  routes: [
+                    GoRoute(
+                      path: ScreeningSubmitPage.routePath,
+                      name: ScreeningSubmitPage.routeName,
+                      builder: (context, state) {
+                        final extra = state.extra as Map<String, dynamic>?;
+                        
+                        if (extra == null) {
+                          return Scaffold(
+                            appBar: AppBar(title: const Text('错误')),
+                            body: const Center(child: Text('缺少必要参数')),
+                          );
+                        }
+
+                        final projectId = extra['projectId'] as int;
+                        final projectName = extra['projectName'] as String;
+                        final criteria = extra['criteria'] as List<ProjectCriteriaModel>;
+
+                        return ChangeNotifierProvider(
+                          create: (context) => ScreeningSubmitProvider(
+                            repository: context.read<ScreeningRepository>(),
+                            projectId: projectId,
+                            criteria: criteria,
+                          ),
+                          child: ScreeningSubmitPage(
+                            projectId: projectId,
+                            projectName: projectName,
+                            criteria: criteria,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -237,6 +278,29 @@ class _YabaiAppState extends State<YabaiApp> {
               ],
             ),
             GoRoute(
+              path: ScreeningDetailPage.routePath,
+              name: ScreeningDetailPage.routeName,
+              builder: (context, state) {
+                final idParam = state.pathParameters['screeningId'];
+                final id = int.tryParse(idParam ?? '');
+
+                if (id == null) {
+                  return Scaffold(
+                    appBar: AppBar(title: const Text('错误')),
+                    body: const Center(child: Text('无效的筛查ID')),
+                  );
+                }
+
+                return ChangeNotifierProvider(
+                  create: (context) => ScreeningDetailProvider(
+                    repository: context.read<ScreeningRepository>(),
+                    screeningId: id,
+                  )..loadDetail(),
+                  child: ScreeningDetailPage(screeningId: id),
+                );
+              },
+            ),
+            GoRoute(
               path: MessageListPage.routePath,
               name: MessageListPage.routeName,
               builder: (context, state) {
@@ -279,6 +343,29 @@ class _YabaiAppState extends State<YabaiApp> {
                   },
                 ),
               ],
+            ),
+            GoRoute(
+              path: UserProfileDetailPage.routePath,
+              name: UserProfileDetailPage.routeName,
+              builder: (context, state) {
+                final idParam = state.pathParameters['userId'];
+                final id = int.tryParse(idParam ?? '');
+
+                if (id == null) {
+                  return Scaffold(
+                    appBar: AppBar(title: const Text('错误')),
+                    body: const Center(child: Text('无效的用户ID')),
+                  );
+                }
+
+                return ChangeNotifierProvider(
+                  create: (context) => UserProfileDetailProvider(
+                    repository: context.read<UserProfileRepository>(),
+                    userId: id,
+                  )..loadProfile(),
+                  child: UserProfileDetailPage(userId: id),
+                );
+              },
             ),
           ],
         ),
@@ -359,6 +446,9 @@ class _YabaiAppState extends State<YabaiApp> {
         ),
         Provider(
           create: (context) => ProjectRepository(context.read<ApiClient>()),
+        ),
+        Provider(
+          create: (context) => ScreeningRepository(context.read<ApiClient>()),
         ),
         Provider(
           create: (context) => MyPostsRepository(context.read<ApiClient>()),

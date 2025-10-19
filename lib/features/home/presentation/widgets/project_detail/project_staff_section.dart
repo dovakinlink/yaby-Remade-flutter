@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/home/data/models/project_staff_model.dart';
 import 'package:yabai_app/features/home/presentation/widgets/project_detail/project_detail_section_container.dart';
+import 'package:yabai_app/features/profile/presentation/pages/user_profile_detail_page.dart';
 
 class ProjectStaffSection extends StatelessWidget {
   const ProjectStaffSection({
@@ -56,20 +58,36 @@ class ProjectStaffSection extends StatelessWidget {
     return Row(
       children: [
         // 头像
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: AppColors.brandGreen.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              person.initial,
-              style: const TextStyle(
-                color: AppColors.brandGreen,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
+        InkWell(
+          onTap: () {
+            // 尝试将 personId 转换为 int
+            final userId = int.tryParse(person.personId);
+            debugPrint('点击项目成员头像: ${person.personName}, personId: ${person.personId}, userId: $userId');
+            if (userId != null) {
+              context.pushNamed(
+                UserProfileDetailPage.routeName,
+                pathParameters: {'userId': userId.toString()},
+              );
+            } else {
+              debugPrint('无法解析用户ID: ${person.personId}');
+            }
+          },
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.brandGreen.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                person.initial,
+                style: const TextStyle(
+                  color: AppColors.brandGreen,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),

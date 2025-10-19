@@ -47,18 +47,10 @@ class MessageListItem extends StatelessWidget {
                   children: [
                     // 标题行
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: Text(
-                            message.fromUserName,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: isDark 
-                                  ? AppColors.darkNeutralText 
-                                  : AppColors.lightNeutralText,
-                            ),
-                          ),
+                          child: _buildMessageTitle(isDark),
                         ),
                         Text(
                           message.formattedTime,
@@ -122,37 +114,79 @@ class MessageListItem extends StatelessWidget {
 
   Widget _buildMessageIcon(bool isDark) {
     IconData iconData;
-    Color backgroundColor;
+    Color iconColor;
     
-    switch (message.category) {
-      case 'NOTICE_COMMENT':
-        iconData = Icons.comment_outlined;
-        backgroundColor = AppColors.brandGreen.withValues(alpha: 0.1);
+    switch (message.iconType) {
+      case 'screening':
+        iconData = Icons.assignment;
+        iconColor = const Color(0xFF8B5CF6); // 紫色
         break;
-      case 'COMMENT_REPLY':
-        iconData = Icons.reply_outlined;
-        backgroundColor = Colors.blue.withValues(alpha: 0.1);
+      case 'comment':
+        iconData = message.category == 'COMMENT_REPLY' 
+            ? Icons.reply_outlined 
+            : Icons.comment_outlined;
+        iconColor = AppColors.brandGreen;
         break;
       default:
         iconData = Icons.notifications_outlined;
-        backgroundColor = Colors.grey.withValues(alpha: 0.1);
+        iconColor = const Color(0xFF3B82F6);
     }
 
     return Container(
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: iconColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Icon(
         iconData,
         size: 20,
-        color: message.category == 'NOTICE_COMMENT' 
-            ? AppColors.brandGreen 
-            : message.category == 'COMMENT_REPLY'
-                ? Colors.blue
-                : Colors.grey[600],
+        color: iconColor,
+      ),
+    );
+  }
+
+  /// 构建消息标题（根据类型显示不同内容）
+  Widget _buildMessageTitle(bool isDark) {
+    if (message.iconType == 'screening' && message.projectName != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            message.fromUserName,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: isDark 
+                  ? AppColors.darkNeutralText 
+                  : AppColors.lightNeutralText,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            message.projectName!,
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark 
+                  ? AppColors.darkSecondaryText 
+                  : const Color(0xFF6B7280),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      );
+    }
+    
+    return Text(
+      message.fromUserName,
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: isDark 
+            ? AppColors.darkNeutralText 
+            : AppColors.lightNeutralText,
       ),
     );
   }

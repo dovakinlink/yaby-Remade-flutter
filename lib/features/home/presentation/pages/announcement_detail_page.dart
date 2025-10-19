@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/home/data/models/announcement_model.dart';
@@ -1035,7 +1035,7 @@ class _ImagePreviewDialog extends StatelessWidget {
   }
 }
 
-class _HtmlContentView extends StatefulWidget {
+class _HtmlContentView extends StatelessWidget {
   const _HtmlContentView({
     required this.htmlContent,
     required this.isDark,
@@ -1045,185 +1045,72 @@ class _HtmlContentView extends StatefulWidget {
   final bool isDark;
 
   @override
-  State<_HtmlContentView> createState() => _HtmlContentViewState();
-}
-
-class _HtmlContentViewState extends State<_HtmlContentView> {
-  WebViewController? _controller;
-  double _webViewHeight = 400; // 默认高度
-  bool _isDisposed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeWebView();
-  }
-
-  @override
-  void dispose() {
-    _isDisposed = true;
-    super.dispose();
-  }
-
-  void _initializeWebView() {
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onNavigationRequest: (request) {
-            if (_isDisposed) return NavigationDecision.prevent;
-            
-            // 拦截外部链接
-            if (request.url.startsWith('http')) {
-              if (mounted && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('即将打开: ${request.url}')),
-                );
-              }
-              return NavigationDecision.prevent;
-            }
-            return NavigationDecision.navigate;
-          },
-        ),
-      )
-      ..loadHtmlString(_buildHtmlPage());
-
-    // 获取内容高度
-    _updateHeight();
-  }
-
-  Future<void> _updateHeight() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (_isDisposed || !mounted) return;
-
-    try {
-      if (_controller == null) return;
-      
-      final heightString = await _controller!.runJavaScriptReturningResult(
-        'document.documentElement.scrollHeight',
-      );
-      final height = double.tryParse(heightString.toString()) ?? 400;
-      
-      if (!_isDisposed && mounted) {
-        setState(() {
-          _webViewHeight = height + 20; // 添加一些额外空间
-        });
-      }
-    } catch (e) {
-      debugPrint('获取WebView高度失败: $e');
-    }
-  }
-
-  String _buildHtmlPage() {
-    final textColor = widget.isDark ? '#F8F9FA' : '#1F2937';
-    final backgroundColor = widget.isDark ? '#333333' : '#FFFFFF';
-    final linkColor = '#36CAC4'; // AppColors.brandGreen
-
-    return '''
-<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      font-size: 16px;
-      line-height: 1.6;
-      color: $textColor;
-      background-color: $backgroundColor;
-      padding: 20px;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-    
-    h1 {
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 16px;
-      color: $textColor;
-    }
-    
-    h2 {
-      font-size: 20px;
-      font-weight: 700;
-      margin-bottom: 12px;
-      text-align: center;
-      color: $textColor;
-    }
-    
-    h3 {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 10px;
-      color: $textColor;
-    }
-    
-    p {
-      margin: 8px 0;
-      font-size: 16px;
-      line-height: 1.6;
-      color: $textColor;
-    }
-    
-    ol, ul {
-      margin: 8px 0 8px 20px;
-      padding: 0;
-    }
-    
-    li {
-      margin-bottom: 4px;
-      font-size: 16px;
-      line-height: 1.6;
-      color: $textColor;
-    }
-    
-    strong, b {
-      font-weight: 700;
-      color: $textColor;
-    }
-    
-    a {
-      color: $linkColor;
-      text-decoration: underline;
-    }
-    
-    img {
-      max-width: 100%;
-      height: auto;
-      margin: 8px 0;
-      display: block;
-    }
-  </style>
-</head>
-<body>
-  ${widget.htmlContent}
-</body>
-</html>
-''';
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (_controller == null) {
-      return SizedBox(
-        height: 100,
-        child: Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation(AppColors.brandGreen),
-          ),
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: HtmlWidget(
+        htmlContent,
+        textStyle: TextStyle(
+          fontSize: 16,
+          height: 1.6,
+          color: isDark ? AppColors.darkNeutralText : const Color(0xFF1F2937),
         ),
-      );
-    }
-    
-    return SizedBox(
-      height: _webViewHeight,
-      child: WebViewWidget(controller: _controller!),
+        renderMode: RenderMode.column,
+        customStylesBuilder: (element) {
+          final tag = element.localName;
+          switch (tag) {
+            case 'body':
+              return {'margin': '0', 'padding': '0'};
+            case 'h1':
+              return {
+                'margin': '0 0 16px 0',
+                'font-size': '24px',
+                'font-weight': '700',
+              };
+            case 'h2':
+              return {
+                'margin': '0 0 12px 0',
+                'font-size': '20px',
+                'font-weight': '700',
+                'text-align': 'center',
+              };
+            case 'h3':
+              return {
+                'margin': '0 0 10px 0',
+                'font-size': '18px',
+                'font-weight': '600',
+              };
+            case 'p':
+              return {'margin': '8px 0'};
+            case 'ol':
+            case 'ul':
+              return {
+                'margin': '8px 0',
+                'padding': '0 0 0 20px',
+              };
+            case 'li':
+              return {'margin': '4px 0'};
+            case 'a':
+              return {
+                'color': '#36CAC4',
+                'text-decoration': 'underline',
+              };
+            case 'img':
+              return {
+                'margin': '8px 0',
+                'width': '100%',
+              };
+            default:
+              return null;
+          }
+        },
+        onTapUrl: (url) async {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('即将打开: $url')),
+          );
+          return false;
+        },
+      ),
     );
   }
 }

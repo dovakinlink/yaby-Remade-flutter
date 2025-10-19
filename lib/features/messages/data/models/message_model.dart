@@ -64,6 +64,53 @@ class Message {
     return extra['noticeTitle'] as String?;
   }
 
+  /// 获取筛查ID（筛查相关消息）
+  int? get screeningId {
+    final extra = extraData;
+    return extra['screeningId'] as int?;
+  }
+
+  /// 获取项目ID（筛查相关消息）
+  int? get projectId {
+    final extra = extraData;
+    return extra['projectId'] as int?;
+  }
+
+  /// 获取项目名称（筛查相关消息）
+  String? get projectName {
+    final extra = extraData;
+    return extra['projectName'] as String?;
+  }
+
+  /// 获取患者姓名简称（筛查相关消息）
+  String? get patientNameAbbr {
+    final extra = extraData;
+    return extra['patientNameAbbr'] as String?;
+  }
+
+  /// 获取状态代码（筛查状态变更消息）
+  String? get statusCode {
+    final extra = extraData;
+    return extra['statusCode'] as String?;
+  }
+
+  /// 获取状态文本（筛查状态变更消息）
+  String? get statusText {
+    final extra = extraData;
+    return extra['statusText'] as String?;
+  }
+
+  /// 获取消息图标类型
+  String get iconType {
+    if (category.startsWith('SCREENING')) {
+      return 'screening';
+    } else if (category.contains('COMMENT')) {
+      return 'comment';
+    } else {
+      return 'default';
+    }
+  }
+
   /// 获取消息类型的显示文本
   String get categoryDisplayText {
     switch (category) {
@@ -71,6 +118,10 @@ class Message {
         return '评论了你的帖子';
       case 'COMMENT_REPLY':
         return '回复了你的评论';
+      case 'SCREENING_CREATED':
+        return '提交了初筛';
+      case 'SCREENING_STATUS_CHANGED':
+        return '更新了筛查状态';
       default:
         return '发送了消息';
     }

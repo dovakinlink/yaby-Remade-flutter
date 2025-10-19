@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/home/presentation/widgets/project_detail/project_attrs_section.dart';
@@ -8,6 +9,7 @@ import 'package:yabai_app/features/home/presentation/widgets/project_detail/proj
 import 'package:yabai_app/features/home/presentation/widgets/project_detail/project_staff_section.dart';
 import 'package:yabai_app/features/home/presentation/widgets/project_detail/project_tags_section.dart';
 import 'package:yabai_app/features/home/providers/project_detail_provider.dart';
+import 'package:yabai_app/features/screening/presentation/pages/screening_submit_page.dart';
 
 class ProjectDetailPage extends StatefulWidget {
   const ProjectDetailPage({super.key, required this.projectId});
@@ -48,6 +50,28 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
             : const Color(0xFFF8F9FA),
       ),
       body: _buildBody(provider, isDark),
+      floatingActionButton: provider.project != null && provider.project!.hasCriteria
+          ? FloatingActionButton(
+              onPressed: () {
+                final project = provider.project!;
+                context.pushNamed(
+                  ScreeningSubmitPage.routeName,
+                  pathParameters: {'id': project.id.toString()},
+                  extra: {
+                    'projectId': project.id,
+                    'projectName': project.projName,
+                    'criteria': project.criteria,
+                  },
+                );
+              },
+              backgroundColor: AppColors.brandGreen,
+              child: const Icon(
+                Icons.add,
+                color: Colors.white,
+                size: 28,
+              ),
+            )
+          : null,
     );
   }
 
