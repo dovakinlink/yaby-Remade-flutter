@@ -38,6 +38,13 @@ import 'package:yabai_app/features/learning/providers/learning_resource_list_pro
 import 'package:yabai_app/features/learning/providers/learning_resource_detail_provider.dart';
 import 'package:yabai_app/features/learning/presentation/pages/learning_resource_list_page.dart';
 import 'package:yabai_app/features/learning/presentation/pages/learning_resource_detail_page.dart';
+import 'package:yabai_app/features/messages/data/models/message_model.dart';
+import 'package:yabai_app/features/messages/data/repositories/message_repository.dart';
+import 'package:yabai_app/features/messages/providers/message_unread_count_provider.dart';
+import 'package:yabai_app/features/messages/providers/message_list_provider.dart';
+import 'package:yabai_app/features/messages/providers/message_detail_provider.dart';
+import 'package:yabai_app/features/messages/presentation/pages/message_list_page.dart';
+import 'package:yabai_app/features/messages/presentation/pages/message_detail_page.dart';
 
 class YabaiApp extends StatefulWidget {
   const YabaiApp({super.key});
@@ -229,6 +236,50 @@ class _YabaiAppState extends State<YabaiApp> {
                 ),
               ],
             ),
+            GoRoute(
+              path: MessageListPage.routePath,
+              name: MessageListPage.routeName,
+              builder: (context, state) {
+                return MultiProvider(
+                  providers: [
+                    ChangeNotifierProvider(
+                      create: (context) => MessageListProvider(
+                        context.read<MessageRepository>(),
+                      ),
+                    ),
+                  ],
+                  child: const MessageListPage(),
+                );
+              },
+              routes: [
+                GoRoute(
+                  path: MessageDetailPage.routePath,
+                  name: MessageDetailPage.routeName,
+                  builder: (context, state) {
+                    final idParam = state.pathParameters['id'];
+                    final id = int.tryParse(idParam ?? '');
+
+                    if (id == null) {
+                      return Scaffold(
+                        appBar: AppBar(title: const Text('错误')),
+                        body: const Center(child: Text('无效的消息ID')),
+                      );
+                    }
+
+                    final extra = state.extra;
+                    return ChangeNotifierProvider(
+                      create: (context) => MessageDetailProvider(
+                        context.read<MessageRepository>(),
+                      ),
+                      child: MessageDetailPage(
+                        messageId: id,
+                        message: extra is Message ? extra : null,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ],
         ),
       ],
@@ -322,6 +373,14 @@ class _YabaiAppState extends State<YabaiApp> {
           create: (context) => LearningResourceListProvider(
             context.read<LearningResourceRepository>(),
           ),
+        ),
+        Provider(
+          create: (context) => MessageRepository(context.read<ApiClient>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => MessageUnreadCountProvider(
+            context.read<MessageRepository>(),
+          )..loadUnreadCount(),
         ),
         ChangeNotifierProvider(create: (_) => LoginFormProvider()),
       ],

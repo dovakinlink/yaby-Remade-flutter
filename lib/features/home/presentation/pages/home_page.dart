@@ -16,6 +16,9 @@ import 'package:yabai_app/features/profile/presentation/pages/profile_page.dart'
 import 'package:yabai_app/features/learning/data/models/learning_resource_model.dart';
 import 'package:yabai_app/features/learning/presentation/pages/learning_resource_detail_page.dart';
 import 'package:yabai_app/features/learning/providers/learning_resource_list_provider.dart';
+import 'package:yabai_app/features/messages/data/repositories/message_repository.dart';
+import 'package:yabai_app/features/messages/providers/message_list_provider.dart';
+import 'package:yabai_app/features/messages/presentation/pages/message_list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -67,7 +70,7 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     setState(() => _currentTab = index);
-    if (index != 0 && index != 1 && index != 4 && mounted) {
+    if (index == 2 && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('"${_tabLabel(index)}"功能即将上线'),
@@ -152,11 +155,7 @@ class _HomePageState extends State<HomePage> {
           description: '"AI"功能即将上线',
           icon: Icons.psychology_alt_outlined,
         ),
-        _buildComingSoonTab(
-          title: '消息',
-          description: '"消息"功能即将上线',
-          icon: Icons.notifications_none_rounded,
-        ),
+        _buildMessageTab(),
         const ProfilePage(),
       ],
     );
@@ -229,6 +228,15 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildLearningTab() {
     return const _LearningTabView();
+  }
+
+  Widget _buildMessageTab() {
+    return ChangeNotifierProvider(
+      create: (context) => MessageListProvider(
+        context.read<MessageRepository>(),
+      ),
+      child: const MessageListPage(),
+    );
   }
 
   Widget _buildComingSoonTab({
