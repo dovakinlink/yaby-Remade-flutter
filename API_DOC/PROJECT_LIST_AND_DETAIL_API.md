@@ -405,6 +405,8 @@ curl -X GET "http://localhost:8080/api/v1/projects/12" \
     "staff": [
       {
         "personId": "abc123def456",
+        "userId": 123,
+        "avatar": "https://example.com/avatars/zhangsan.jpg",
         "personName": "张三",
         "roleName": "CRC",
         "isPrimary": true,
@@ -412,6 +414,8 @@ curl -X GET "http://localhost:8080/api/v1/projects/12" \
       },
       {
         "personId": "xyz789uvw012",
+        "userId": 456,
+        "avatar": "https://example.com/avatars/lisi.jpg",
         "personName": "李四",
         "roleName": "PI",
         "isPrimary": false,
@@ -508,13 +512,15 @@ curl -X GET "http://localhost:8080/api/v1/projects/12" \
 
 ### ProjectStaffVO 字段（项目人员）
 
-| 字段名     | 类型    | 说明                        |
-|------------|---------|-----------------------------|
-| personId   | String  | 人员ID                      |
-| personName | String  | 人员姓名                    |
-| roleName   | String  | 角色名称（如 CRC、PI、CRA） |
-| isPrimary  | Boolean | 是否主要负责人              |
-| note       | String  | 备注                        |
+| 字段名     | 类型    | 说明                                      |
+|------------|---------|-------------------------------------------|
+| personId   | String  | 人员ID                                    |
+| userId     | Long    | 用户ID（可用于查看用户详情，可能为空）    |
+| avatar     | String  | 用户头像URL（可能为空）                   |
+| personName | String  | 人员姓名                                  |
+| roleName   | String  | 角色名称（如 CRC、PI、CRA）               |
+| isPrimary  | Boolean | 是否主要负责人                            |
+| note       | String  | 备注                                      |
 
 ### PageResponse 字段（分页响应）
 
@@ -653,6 +659,52 @@ A: 调用属性定义接口，查看 `dataType` 字段：
 
 A: 会的。属性选项可以被管理员添加、修改或停用。建议前端定期刷新属性定义，或在每次进入筛选页面时重新获取。
 
+### Q8: 如何查看和展示项目人员信息？
+
+A: 项目人员列表中包含 `userId` 和 `avatar` 字段：
+
+- **头像展示**：直接使用 `avatar` 字段显示人员头像
+- **详细信息**：使用 `userId` 调用用户详情接口（`GET /api/v1/user-profile/{userId}`）查看完整信息
+
+**示例**：
+```dart
+// 在项目详情页面显示人员列表
+Widget buildStaffList(List<ProjectStaffVO> staffList) {
+  return ListView.builder(
+    itemCount: staffList.length,
+    itemBuilder: (context, index) {
+      final staff = staffList[index];
+      return ListTile(
+        leading: CircleAvatar(
+          backgroundImage: staff.avatar != null 
+              ? NetworkImage(staff.avatar!) 
+              : AssetImage('assets/default_avatar.png'),
+        ),
+        title: Text(staff.personName),
+        subtitle: Text(staff.roleName),
+        trailing: staff.isPrimary ? Chip(label: Text('主要负责人')) : null,
+        onTap: staff.userId != null 
+            ? () => _showUserProfile(staff.userId!) 
+            : null,
+      );
+    },
+  );
+}
+
+// 点击人员查看详情
+void _showUserProfile(int userId) async {
+  final userProfile = await getUserProfile(userId);
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => UserProfileDetailPage(profile: userProfile),
+    ),
+  );
+}
+```
+
+注意：`userId` 和 `avatar` 都可能为空（null），表示该人员还未关联系统用户账号。
+
 ---
 
 ## 错误码说明
@@ -678,6 +730,7 @@ A: 会的。属性选项可以被管理员添加、修改或停用。建议前�
 
 ## 更新日志
 
+- **v1.0.2** (2025-10-20): 项目人员信息中添加 `userId` 和 `avatar` 字段，支持查看人员详细信息和头像展示
 - **v1.0.1** (2025-10-16): 添加属性定义查询接口，支持获取模板的自定义属性及选项
 - **v1.0.0** (2025-10-16): 初始版本，实现项目列表和详情查询接口
 

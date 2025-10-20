@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/home/data/models/project_staff_model.dart';
 import 'package:yabai_app/features/home/presentation/widgets/project_detail/project_detail_section_container.dart';
@@ -55,43 +57,50 @@ class ProjectStaffSection extends StatelessWidget {
     ProjectStaffModel person,
     bool isDark,
   ) {
+    final apiClient = context.read<ApiClient>();
+    final hasClickableProfile = person.hasUserId;
+
+    // 构建头像内容
+    Widget avatarContent;
+    if (person.hasAvatar) {
+      final resolvedUrl = apiClient.resolveUrlSync(person.avatar!);
+      avatarContent = ClipOval(
+        child: Image.network(
+          resolvedUrl,
+          width: 48,
+          height: 48,
+          fit: BoxFit.cover,
+          headers: apiClient.getAuthHeaders(),
+          errorBuilder: (context, error, stackTrace) {
+            // 加载失败显示首字母
+            return _buildInitialAvatar(person.initial);
+          },
+        ),
+      );
+    } else {
+      avatarContent = _buildInitialAvatar(person.initial);
+    }
+
+    // 包装InkWell（仅当有userId时）
+    Widget avatar = avatarContent;
+    if (hasClickableProfile) {
+      avatar = InkWell(
+        onTap: () {
+          debugPrint('点击项目成员头像: ${person.personName}, userId: ${person.userId}');
+          context.pushNamed(
+            UserProfileDetailPage.routeName,
+            pathParameters: {'userId': person.userId.toString()},
+          );
+        },
+        borderRadius: BorderRadius.circular(24),
+        child: avatarContent,
+      );
+    }
+
     return Row(
       children: [
         // 头像
-        InkWell(
-          onTap: () {
-            // 尝试将 personId 转换为 int
-            final userId = int.tryParse(person.personId);
-            debugPrint('点击项目成员头像: ${person.personName}, personId: ${person.personId}, userId: $userId');
-            if (userId != null) {
-              context.pushNamed(
-                UserProfileDetailPage.routeName,
-                pathParameters: {'userId': userId.toString()},
-              );
-            } else {
-              debugPrint('无法解析用户ID: ${person.personId}');
-            }
-          },
-          borderRadius: BorderRadius.circular(24),
-          child: Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.brandGreen.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                person.initial,
-                style: const TextStyle(
-                  color: AppColors.brandGreen,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ),
+        avatar,
         const SizedBox(width: 16),
         // 人员信息
         Expanded(
@@ -180,6 +189,27 @@ class ProjectStaffSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildInitialAvatar(String initial) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: AppColors.brandGreen.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            color: AppColors.brandGreen,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 }

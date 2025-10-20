@@ -4,6 +4,7 @@ class AppColors {
   // 品牌色（在浅色和深色主题中保持一致）
   static const brandGreen = Color(0xFF36CAC4);
   static const accentBlue = Color(0xFF36CAC4);
+  static const usernameBlue = Color(0xFF1A73E8);
 
   // 浅色主题颜色
   static const lightNeutralText = Color(0xFF0F172A);

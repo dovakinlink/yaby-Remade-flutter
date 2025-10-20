@@ -33,7 +33,7 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _scrollController = ScrollController()..addListener(_handleScroll);
 
     // 刷新用户信息
@@ -90,7 +90,6 @@ class _ProfilePageState extends State<ProfilePage>
                 indicatorColor: AppColors.brandGreen,
                 tabs: const [
                   Tab(text: '我的帖子'),
-                  Tab(text: '我的筛选'),
                   Tab(text: '设置'),
                 ],
               ),
@@ -101,7 +100,6 @@ class _ProfilePageState extends State<ProfilePage>
                 controller: _tabController,
                 children: [
                   _buildMyPostsTab(),
-                  _buildPlaceholderTab('TODO: 我的筛选功能'),
                   _buildSettingsTab(isDark),
                 ],
               ),
@@ -200,9 +198,7 @@ class _ProfilePageState extends State<ProfilePage>
                       Text(
                         '@${profile.username}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: isDark
-                                  ? AppColors.darkSecondaryText
-                                  : Colors.grey[600],
+                              color: AppColors.usernameBlue,
                             ),
                       ),
                     ],
@@ -673,15 +669,4 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  Widget _buildPlaceholderTab(String message) {
-    return Center(
-      child: Text(
-        message,
-        style: TextStyle(
-          fontSize: 16,
-          color: Colors.grey[600],
-        ),
-      ),
-    );
-  }
 }

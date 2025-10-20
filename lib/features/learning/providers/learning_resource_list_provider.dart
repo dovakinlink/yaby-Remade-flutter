@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:yabai_app/core/network/api_exception.dart';
 import 'package:yabai_app/features/learning/data/models/learning_resource_model.dart';
 import 'package:yabai_app/features/learning/data/repositories/learning_resource_repository.dart';
 
@@ -41,10 +42,14 @@ class LearningResourceListProvider extends ChangeNotifier {
       _hasNext = response.hasNext;
       _errorMessage = null;
       _hasLoadedInitial = true;
-    } catch (e) {
-      _errorMessage = e.toString();
+    } on ApiException catch (error) {
+      _errorMessage = _mapErrorMessage(error);
       _hasLoadedInitial = false;
-      debugPrint('加载学习资源失败: $e');
+      debugPrint('加载学习资源失败: $error');
+    } catch (error) {
+      _errorMessage = '加载失败，请稍后重试';
+      _hasLoadedInitial = false;
+      debugPrint('加载学习资源失败: $error');
     } finally {
       _isInitialLoading = false;
       notifyListeners();
@@ -66,9 +71,12 @@ class LearningResourceListProvider extends ChangeNotifier {
       _currentPage = response.page;
       _hasNext = response.hasNext;
       _loadMoreError = null;
-    } catch (e) {
-      _loadMoreError = e.toString();
-      debugPrint('加载更多学习资源失败: $e');
+    } on ApiException catch (error) {
+      _loadMoreError = _mapErrorMessage(error);
+      debugPrint('加载更多学习资源失败: $error');
+    } catch (error) {
+      _loadMoreError = '加载更多失败，请稍后重试';
+      debugPrint('加载更多学习资源失败: $error');
     } finally {
       _isLoadingMore = false;
       notifyListeners();
@@ -91,5 +99,14 @@ class LearningResourceListProvider extends ChangeNotifier {
     } catch (_) {
       return null;
     }
+  }
+
+  String _mapErrorMessage(ApiException exception) {
+    if (exception.code == 'HOSPITAL_NOT_FOUND') {
+      return '您未关联任何医院。';
+    }
+    return exception.message.isNotEmpty
+        ? exception.message
+        : '加载失败，请稍后重试';
   }
 }

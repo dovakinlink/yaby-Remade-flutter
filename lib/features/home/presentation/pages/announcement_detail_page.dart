@@ -86,10 +86,33 @@ class _AnnouncementDetailPageState extends State<AnnouncementDetailPage> {
 
     return Scaffold(
       backgroundColor: backgroundColor,
+      appBar: AppBar(
+        backgroundColor: isDark ? AppColors.darkCardBackground : Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back_ios_new),
+          color: isDark
+              ? AppColors.darkNeutralText
+              : AppColors.lightNeutralText,
+          padding: EdgeInsets.zero,
+          splashRadius: 20,
+        ),
+        title: Text(
+          '通知公告',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+                color: isDark ? AppColors.darkNeutralText : null,
+              ),
+        ),
+      ),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
-            _HeaderBar(title: '通知公告'),
             if (!_showComments)
               Expanded(
                 child: SingleChildScrollView(
@@ -521,102 +544,6 @@ class _AnnouncementDetailPageState extends State<AnnouncementDetailPage> {
         }
       }
     }
-  }
-}
-
-class _HeaderBar extends StatelessWidget {
-  const _HeaderBar({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCardBackground : Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => context.pop(),
-            icon: const Icon(
-              Icons.arrow_back_ios_new,
-              size: 18,
-              color: AppColors.brandGreen,
-            ),
-            padding: EdgeInsets.zero,
-            splashRadius: 20,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            '返回',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.brandGreen,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              fontSize: 18,
-              color: isDark ? AppColors.darkNeutralText : null,
-            ),
-          ),
-          const Spacer(),
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('消息中心即将上线')));
-            },
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  Icons.sms_outlined,
-                  color: isDark 
-                      ? AppColors.darkNeutralText 
-                      : const Color(0xFF1F2937),
-                ),
-                Positioned(
-                  right: -2,
-                  top: -2,
-                  child: Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: AppColors.brandGreen,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      '2',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 

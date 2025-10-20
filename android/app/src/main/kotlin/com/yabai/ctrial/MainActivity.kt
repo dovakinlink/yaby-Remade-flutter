@@ -1,5 +1,6 @@
-package com.example.yabai_app
+package com.yabai.ctrial
 
 import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity()
+

@@ -1,15 +1,31 @@
 # 崖柏 Flutter 应用
 
-基于 Flutter 3.35.4 创建的多端应用，按照提供的登陆页面设计稿实现，同时预置规范化的主题、路由与状态管理结构。
+临床试验管理系统移动端应用，支持 iOS 和 Android 平台。
 
 ## 快速开始
+
+### 开发环境运行
 
 ```bash
 flutter pub get
 flutter run
 ```
 
-可选命令：
+### 打包发布
+
+详细的打包指南请参考 [BUILD_GUIDE.md](./BUILD_GUIDE.md)
+
+**快速打包命令**：
+
+```bash
+# 开发环境打包（真机测试）
+./scripts/build_dev.sh
+
+# 生产环境打包（正式发布）
+./scripts/build_release.sh https://your-api-server.com
+```
+
+### 代码检查
 
 ```bash
 flutter analyze
