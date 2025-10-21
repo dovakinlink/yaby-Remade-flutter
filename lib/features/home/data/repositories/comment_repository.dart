@@ -124,13 +124,24 @@ class CommentRepository {
       }
 
       final data = apiResponse.data;
-      if (data == null || data.isEmpty) {
-        debugPrint('创建评论失败: 评论数据为空, apiResponse.success=${apiResponse.success}');
-        throw ApiException(message: '评论数据为空');
+      if (data == null) {
+        debugPrint('创建评论失败: 评论数据为null');
+        throw ApiException(message: '服务器未返回评论数据');
       }
 
       debugPrint('创建评论成功，解析数据: ${data.toString()}');
-      return Comment.fromJson(data);
+      
+      // 尝试解析评论数据
+      try {
+        return Comment.fromJson(data);
+      } catch (parseError) {
+        debugPrint('警告：评论创建成功但数据解析失败: $parseError');
+        // 虽然解析失败，但评论已经创建成功，抛出特殊异常说明情况
+        throw ApiException(
+          message: '评论已成功发表',
+          code: 'PARSE_ERROR_BUT_SUCCESS',
+        );
+      }
     } on DioException catch (error) {
       debugPrint('创建评论网络错误: ${error.message}');
       final dynamic responseBody = error.response?.data;

@@ -100,6 +100,8 @@ class CommentListProvider extends ChangeNotifier {
     _isSubmitting = true;
     notifyListeners();
 
+    bool commentCreated = false;
+
     try {
       // 创建评论
       await _repository.createComment(
@@ -109,26 +111,45 @@ class CommentListProvider extends ChangeNotifier {
       );
       
       debugPrint('评论创建成功');
+      commentCreated = true;
       
+    } catch (e) {
+      final errorString = e.toString();
+      // 检查是否是 "评论已成功发表" 的情况（虽然解析失败，但评论已创建）
+      if (errorString.contains('PARSE_ERROR_BUT_SUCCESS') || 
+          errorString.contains('评论已成功发表')) {
+        debugPrint('评论创建成功（但返回数据解析失败）');
+        commentCreated = true;
+      } else {
+        debugPrint('创建评论失败: $e');
+        _isSubmitting = false;
+        notifyListeners();
+        return false;
+      }
+    }
+
+    // 如果评论创建成功（无论是否解析成功），都刷新列表
+    if (commentCreated) {
       // 取消回复状态
       _replyingTo = null;
       
-      // 刷新列表（即使刷新失败也不影响评论创建的结果）
+      // 刷新列表
       try {
         await refresh();
         debugPrint('评论列表刷新成功');
       } catch (refreshError) {
         debugPrint('评论列表刷新失败（但评论已创建成功）: $refreshError');
+        // 即使刷新失败，也认为操作成功，因为评论确实已创建
       }
       
-      return true;
-    } catch (e) {
-      debugPrint('创建评论失败: $e');
-      return false;
-    } finally {
       _isSubmitting = false;
       notifyListeners();
+      return true;
     }
+
+    _isSubmitting = false;
+    notifyListeners();
+    return false;
   }
 
   /// 删除评论
