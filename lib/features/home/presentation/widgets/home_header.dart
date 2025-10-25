@@ -5,9 +5,8 @@ import 'package:yabai_app/core/providers/theme_provider.dart';
 import 'package:yabai_app/features/messages/providers/message_unread_count_provider.dart';
 
 class HomeHeader extends StatelessWidget {
-  const HomeHeader({super.key, this.onOpenDrawer, this.onOpenMessages});
+  const HomeHeader({super.key, this.onOpenMessages});
 
-  final VoidCallback? onOpenDrawer;
   final VoidCallback? onOpenMessages;
 
   @override
@@ -18,25 +17,8 @@ class HomeHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // 左侧菜单按钮
-          GestureDetector(
-            onTap: onOpenDrawer,
-            child: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: AppColors.brandGreen,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Icon(
-                Icons.grid_view_rounded,
-                color: Colors.white,
-                size: 16,
-              ),
-            ),
-          ),
           // 右侧按钮组
           Row(
             mainAxisSize: MainAxisSize.min,

@@ -61,7 +61,16 @@ class _LearningResourceListPageState extends State<LearningResourceListPage> {
           ? AppColors.darkScaffoldBackground
           : const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('学习资源中心'),
+        automaticallyImplyLeading: false,
+        centerTitle: true,
+        toolbarHeight: 64,
+        title: const Text(
+          '学习资源中心',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         backgroundColor: isDark ? AppColors.darkCardBackground : Colors.white,
         elevation: 0,
       ),
@@ -114,18 +123,41 @@ class _LearningResourceListPageState extends State<LearningResourceListPage> {
     }
 
     if (provider.resources.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.school_outlined, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              '暂无学习资源',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.height - 200,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.school_outlined, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    '暂无学习资源',
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '下拉刷新或点击右上角刷新按钮重试',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: () => provider.refresh(),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('刷新'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.brandGreen,
+                      side: const BorderSide(color: AppColors.brandGreen),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
@@ -288,4 +320,3 @@ class _LearningResourceListPageState extends State<LearningResourceListPage> {
     return DateFormat('yyyy-MM-dd').format(date);
   }
 }
-

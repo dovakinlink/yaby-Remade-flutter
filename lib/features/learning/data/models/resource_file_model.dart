@@ -47,8 +47,20 @@ class ResourceFile {
   bool get isPdf => ext.toLowerCase() == '.pdf';
 
   /// 判断是否为图片文件
-  bool get isImage => ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp']
-      .contains(ext.toLowerCase());
+  bool get isImage {
+    // 先检查 MIME 类型
+    if (mimeType.toLowerCase().startsWith('image/')) {
+      return true;
+    }
+    
+    // 再检查扩展名（支持带点和不带点的情况）
+    final normalizedExt = ext.toLowerCase().startsWith('.') 
+        ? ext.toLowerCase() 
+        : '.$ext'.toLowerCase();
+    
+    return ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']
+        .contains(normalizedExt);
+  }
 
   /// 判断是否为Office文档
   bool get isOfficeDoc =>

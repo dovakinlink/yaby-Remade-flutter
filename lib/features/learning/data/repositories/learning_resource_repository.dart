@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/core/network/api_exception.dart';
 import 'package:yabai_app/core/network/models/api_response.dart';
@@ -17,6 +18,8 @@ class LearningResourceRepository {
     int size = 10,
   }) async {
     try {
+      debugPrint('请求学习资源列表: page=$page, size=$size');
+      
       final response = await _apiClient.get(
         '/api/v1/learning-resources',
         queryParameters: {
@@ -25,10 +28,15 @@ class LearningResourceRepository {
         },
       );
 
+      debugPrint('学习资源API响应状态: ${response.statusCode}');
+
       final body = response.data;
       if (body == null) {
+        debugPrint('学习资源API返回数据为null');
         throw ApiException(message: '服务器未返回数据');
       }
+
+      debugPrint('学习资源API返回数据类型: ${body.runtimeType}');
 
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         body,
@@ -40,7 +48,10 @@ class LearningResourceRepository {
         },
       );
 
+      debugPrint('学习资源API success=${apiResponse.success}, code=${apiResponse.code}, message=${apiResponse.message}');
+
       if (!apiResponse.success) {
+        debugPrint('学习资源API返回失败: ${apiResponse.message}');
         throw ApiException(
           message: apiResponse.message,
           code: apiResponse.code,
@@ -48,14 +59,21 @@ class LearningResourceRepository {
       }
 
       final data = apiResponse.data;
-      if (data == null || data.isEmpty) {
+      if (data == null) {
+        debugPrint('学习资源data为null，返回空列表');
         return PageResponse<LearningResource>.empty();
       }
 
-      return PageResponse.fromJson(
+      debugPrint('学习资源data keys: ${data.keys.toList()}');
+      
+      final pageResponse = PageResponse.fromJson(
         data,
         (json) => LearningResource.fromJson(json),
       );
+      
+      debugPrint('解析学习资源成功: 共${pageResponse.data.length}条, 当前页${pageResponse.page}, hasNext=${pageResponse.hasNext}');
+      
+      return pageResponse;
     } on DioException catch (error) {
       final dynamic responseBody = error.response?.data;
       String? code;
@@ -77,6 +95,8 @@ class LearningResourceRepository {
   /// 获取学习资源详情
   Future<LearningResourceDetail> getResourceDetail(int resourceId) async {
     try {
+      debugPrint('请求学习资源详情: id=$resourceId');
+      
       final response = await _apiClient.get(
         '/api/v1/learning-resources/$resourceId',
       );
@@ -85,6 +105,8 @@ class LearningResourceRepository {
       if (body == null) {
         throw ApiException(message: '服务器未返回数据');
       }
+
+      debugPrint('学习资源详情API响应状态: ${response.statusCode}');
 
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         body,
@@ -108,7 +130,18 @@ class LearningResourceRepository {
         throw ApiException(message: '学习资源详情数据为空');
       }
 
-      return LearningResourceDetail.fromJson(data);
+      debugPrint('学习资源详情data keys: ${data.keys.toList()}');
+      if (data['files'] != null) {
+        debugPrint('文件数量: ${(data['files'] as List).length}');
+        for (var file in (data['files'] as List)) {
+          debugPrint('文件信息: ${file['displayName']}, ext: ${file['ext']}, mimeType: ${file['mimeType']}, url: ${file['url']}');
+        }
+      }
+
+      final detail = LearningResourceDetail.fromJson(data);
+      debugPrint('解析学习资源详情成功: ${detail.name}, 文件数: ${detail.fileCount}');
+      
+      return detail;
     } on DioException catch (error) {
       final dynamic responseBody = error.response?.data;
       String? code;
@@ -123,8 +156,8 @@ class LearningResourceRepository {
     } on ApiException {
       rethrow;
     } catch (error) {
+      debugPrint('学习资源详情解析错误: $error');
       throw ApiException(message: '学习资源详情解析失败: $error');
     }
   }
 }
-

@@ -185,11 +185,6 @@ class _HomePageState extends State<HomePage> {
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
             SliverToBoxAdapter(
               child: HomeHeader(
-                onOpenDrawer: () {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('侧边栏导航即将推出')));
-                },
                 onOpenMessages: () {
                   context.goNamed(MessageListPage.routeName);
                 },
@@ -499,15 +494,40 @@ class _LearningTabViewState extends State<_LearningTabView> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Consumer<LearningResourceListProvider>(
-      builder: (context, provider, child) {
-        return RefreshIndicator(
-          onRefresh: provider.refresh,
-          backgroundColor: isDark ? AppColors.darkCardBackground : Colors.white,
-          color: AppColors.brandGreen,
-          child: _buildBody(provider, isDark),
-        );
-      },
+    return Column(
+      children: [
+        // 标题栏
+        Container(
+          color: isDark ? AppColors.darkCardBackground : Colors.white,
+          child: SafeArea(
+            bottom: false,
+            child: Container(
+              height: 64,
+              alignment: Alignment.center,
+              child: const Text(
+                '学习资源中心',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
+        // 内容区域
+        Expanded(
+          child: Consumer<LearningResourceListProvider>(
+            builder: (context, provider, child) {
+              return RefreshIndicator(
+                onRefresh: provider.refresh,
+                backgroundColor: isDark ? AppColors.darkCardBackground : Colors.white,
+                color: AppColors.brandGreen,
+                child: _buildBody(provider, isDark),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
