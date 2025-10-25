@@ -9,6 +9,7 @@ import 'package:yabai_app/features/home/presentation/widgets/feed_card.dart';
 import 'package:yabai_app/features/home/presentation/widgets/home_bottom_nav.dart';
 import 'package:yabai_app/features/home/presentation/widgets/home_header.dart';
 import 'package:yabai_app/features/home/presentation/widgets/search_stats_card.dart';
+import 'package:yabai_app/features/home/presentation/widgets/notice_tag_filter.dart';
 import 'package:yabai_app/features/home/providers/home_announcements_provider.dart';
 import 'package:yabai_app/features/home/providers/project_statistics_provider.dart';
 import 'package:intl/intl.dart';
@@ -40,6 +41,11 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_handleScroll);
+    
+    // 加载标签列表
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<HomeAnnouncementsProvider>().loadAnnouncementTags();
+    });
   }
 
   @override
@@ -118,11 +124,7 @@ class _HomePageState extends State<HomePage> {
                 });
               },
               backgroundColor: AppColors.brandGreen,
-              child: const Icon(
-                Icons.add,
-                color: Colors.white,
-                size: 28,
-              ),
+              child: const Icon(Icons.add, color: Colors.white, size: 28),
             )
           : null,
       body: _buildTabStack(
@@ -208,6 +210,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            ..._buildTagFilterSlivers(announcementsProvider),
             ..._buildFeedSlivers(announcementsProvider),
             SliverToBoxAdapter(
               child: Padding(
@@ -228,9 +231,9 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildScreeningTab() {
     return ChangeNotifierProvider(
-      create: (context) => ScreeningListProvider(
-        context.read<ScreeningRepository>(),
-      )..loadInitial(),
+      create: (context) =>
+          ScreeningListProvider(context.read<ScreeningRepository>())
+            ..loadInitial(),
       child: const ScreeningListPage(),
     );
   }
@@ -253,16 +256,10 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
-            Text(
-              description,
-              style: const TextStyle(color: Colors.grey),
-            ),
+            Text(description, style: const TextStyle(color: Colors.grey)),
           ],
         ),
       ),
@@ -295,6 +292,24 @@ class _HomePageState extends State<HomePage> {
       const SearchStatItem(label: '待开始', value: _placeholderValue),
       const SearchStatItem(label: '停止', value: _placeholderValue),
       const SearchStatItem(label: '总数', value: _placeholderValue),
+    ];
+  }
+
+  List<Widget> _buildTagFilterSlivers(HomeAnnouncementsProvider provider) {
+    // 始终显示标签筛选器（至少有"全部"选项）
+    return [
+      SliverToBoxAdapter(
+        child: NoticeTagFilter(
+          tags: provider.tags,
+          selectedTagId: provider.selectedTagId,
+          onTagSelected: (tagId) {
+            debugPrint('HomePage: 选择标签 - tagId: $tagId');
+            unawaited(provider.applyTagFilter(tagId));
+          },
+          isLoading: provider.isLoadingTags,
+        ),
+      ),
+      const SliverToBoxAdapter(child: SizedBox(height: 12)),
     ];
   }
 
@@ -506,10 +521,7 @@ class _LearningTabViewState extends State<_LearningTabView> {
               alignment: Alignment.center,
               child: const Text(
                 '学习资源中心',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -520,7 +532,9 @@ class _LearningTabViewState extends State<_LearningTabView> {
             builder: (context, provider, child) {
               return RefreshIndicator(
                 onRefresh: provider.refresh,
-                backgroundColor: isDark ? AppColors.darkCardBackground : Colors.white,
+                backgroundColor: isDark
+                    ? AppColors.darkCardBackground
+                    : Colors.white,
                 color: AppColors.brandGreen,
                 child: _buildBody(provider, isDark),
               );
@@ -657,7 +671,9 @@ class _LearningTabViewState extends State<_LearningTabView> {
                 Text(
                   resource.remark!,
                   style: TextStyle(
-                    color: isDark ? AppColors.darkSecondaryText : Colors.grey[600],
+                    color: isDark
+                        ? AppColors.darkSecondaryText
+                        : Colors.grey[600],
                   ),
                 ),
               ],
@@ -667,15 +683,18 @@ class _LearningTabViewState extends State<_LearningTabView> {
                   Icon(
                     Icons.access_time,
                     size: 14,
-                    color: isDark ? AppColors.darkSecondaryText : Colors.grey[500],
+                    color: isDark
+                        ? AppColors.darkSecondaryText
+                        : Colors.grey[500],
                   ),
                   const SizedBox(width: 6),
                   Text(
                     dateFormat.format(displayedDate),
                     style: TextStyle(
                       fontSize: 12,
-                      color:
-                          isDark ? AppColors.darkSecondaryText : Colors.grey[600],
+                      color: isDark
+                          ? AppColors.darkSecondaryText
+                          : Colors.grey[600],
                     ),
                   ),
                 ],
@@ -731,10 +750,7 @@ class _LearningTabViewState extends State<_LearningTabView> {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 24),
       child: Center(
-        child: Text(
-          '已经浏览完全部内容',
-          style: TextStyle(color: Color(0xFF94A3B8)),
-        ),
+        child: Text('已经浏览完全部内容', style: TextStyle(color: Color(0xFF94A3B8))),
       ),
     );
   }

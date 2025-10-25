@@ -82,9 +82,12 @@ class _YabaiAppState extends State<YabaiApp> {
             return MultiProvider(
               providers: [
                 ChangeNotifierProvider(
-                  create: (context) => HomeAnnouncementsProvider(
-                    context.read<AnnouncementRepository>(),
-                  )..loadInitial(),
+                  create: (context) =>
+                      HomeAnnouncementsProvider(
+                          context.read<AnnouncementRepository>(),
+                        )
+                        ..loadInitial()
+                        ..loadAnnouncementTags(),
                 ),
                 ChangeNotifierProvider(
                   create: (context) => ProjectStatisticsProvider(
@@ -92,9 +95,8 @@ class _YabaiAppState extends State<YabaiApp> {
                   )..load(),
                 ),
                 ChangeNotifierProvider(
-                  create: (context) => MyPostsProvider(
-                    context.read<MyPostsRepository>(),
-                  ),
+                  create: (context) =>
+                      MyPostsProvider(context.read<MyPostsRepository>()),
                 ),
               ],
               child: const HomePage(),
@@ -129,13 +131,15 @@ class _YabaiAppState extends State<YabaiApp> {
 
                 // 确保 announcement 非 null
                 final validAnnouncement = announcement;
-                
+
                 return ChangeNotifierProvider(
                   create: (context) => CommentListProvider(
                     context.read<CommentRepository>(),
                     noticeId: validAnnouncement.id,
                   )..loadInitial(),
-                  child: AnnouncementDetailPage(announcement: validAnnouncement),
+                  child: AnnouncementDetailPage(
+                    announcement: validAnnouncement,
+                  ),
                 );
               },
             ),
@@ -144,9 +148,8 @@ class _YabaiAppState extends State<YabaiApp> {
               name: CreatePostPage.routeName,
               builder: (context, state) {
                 return ChangeNotifierProvider(
-                  create: (context) => CreatePostProvider(
-                    context.read<PostRepository>(),
-                  ),
+                  create: (context) =>
+                      CreatePostProvider(context.read<PostRepository>()),
                   child: const CreatePostPage(),
                 );
               },
@@ -156,9 +159,9 @@ class _YabaiAppState extends State<YabaiApp> {
               name: ProjectListPage.routeName,
               builder: (context, state) {
                 return ChangeNotifierProvider(
-                  create: (context) => ProjectListProvider(
-                    context.read<ProjectRepository>(),
-                  )..loadInitial(),
+                  create: (context) =>
+                      ProjectListProvider(context.read<ProjectRepository>())
+                        ..loadInitial(),
                   child: const ProjectListPage(),
                 );
               },
@@ -190,7 +193,7 @@ class _YabaiAppState extends State<YabaiApp> {
                       name: ScreeningSubmitPage.routeName,
                       builder: (context, state) {
                         final extra = state.extra as Map<String, dynamic>?;
-                        
+
                         if (extra == null) {
                           return Scaffold(
                             appBar: AppBar(title: const Text('错误')),
@@ -200,7 +203,8 @@ class _YabaiAppState extends State<YabaiApp> {
 
                         final projectId = extra['projectId'] as int;
                         final projectName = extra['projectName'] as String;
-                        final criteria = extra['criteria'] as List<ProjectCriteriaModel>;
+                        final criteria =
+                            extra['criteria'] as List<ProjectCriteriaModel>;
 
                         return ChangeNotifierProvider(
                           create: (context) => ScreeningSubmitProvider(
@@ -225,9 +229,8 @@ class _YabaiAppState extends State<YabaiApp> {
               name: ProfilePage.routeName,
               builder: (context, state) {
                 return ChangeNotifierProvider(
-                  create: (context) => MyPostsProvider(
-                    context.read<MyPostsRepository>(),
-                  ),
+                  create: (context) =>
+                      MyPostsProvider(context.read<MyPostsRepository>()),
                   child: const ProfilePage(),
                 );
               },
@@ -391,9 +394,8 @@ class _YabaiAppState extends State<YabaiApp> {
               previous ?? UserProfileRepository(apiClient),
         ),
         ChangeNotifierProxyProvider<UserProfileRepository, UserProfileProvider>(
-          create: (context) => UserProfileProvider(
-            context.read<UserProfileRepository>(),
-          ),
+          create: (context) =>
+              UserProfileProvider(context.read<UserProfileRepository>()),
           update: (context, repository, previous) =>
               previous ?? UserProfileProvider(repository),
         ),
@@ -402,7 +404,7 @@ class _YabaiAppState extends State<YabaiApp> {
             // 只在首次创建时添加拦截器
             if (previous == null) {
               final authRepository = AuthRepository(apiClient);
-              
+
               // 添加认证拦截器
               apiClient.addInterceptor(
                 AuthInterceptor(
@@ -412,9 +414,10 @@ class _YabaiAppState extends State<YabaiApp> {
                   onSessionExpired: () {
                     // 会话过期时跳转到登录页
                     _router.go(LoginPage.routePath);
-                    
+
                     // 显示提示
-                    final BuildContext? currentContext = _router.routerDelegate.navigatorKey.currentContext;
+                    final BuildContext? currentContext =
+                        _router.routerDelegate.navigatorKey.currentContext;
                     if (currentContext != null && currentContext.mounted) {
                       ScaffoldMessenger.of(currentContext).showSnackBar(
                         const SnackBar(
@@ -426,10 +429,10 @@ class _YabaiAppState extends State<YabaiApp> {
                   },
                 ),
               );
-              
+
               return authRepository;
             }
-            
+
             return previous;
           },
         ),
@@ -457,7 +460,8 @@ class _YabaiAppState extends State<YabaiApp> {
           create: (context) => CommentRepository(context.read<ApiClient>()),
         ),
         Provider(
-          create: (context) => LearningResourceRepository(context.read<ApiClient>()),
+          create: (context) =>
+              LearningResourceRepository(context.read<ApiClient>()),
         ),
         ChangeNotifierProvider(
           create: (context) => LearningResourceListProvider(
@@ -468,9 +472,9 @@ class _YabaiAppState extends State<YabaiApp> {
           create: (context) => MessageRepository(context.read<ApiClient>()),
         ),
         ChangeNotifierProvider(
-          create: (context) => MessageUnreadCountProvider(
-            context.read<MessageRepository>(),
-          )..loadUnreadCount(),
+          create: (context) =>
+              MessageUnreadCountProvider(context.read<MessageRepository>())
+                ..loadUnreadCount(),
         ),
         ChangeNotifierProvider(create: (_) => LoginFormProvider()),
       ],
@@ -495,10 +499,7 @@ class _YabaiAppState extends State<YabaiApp> {
 
 /// 应用初始化器：在应用启动时恢复会话
 class _AppInitializer extends StatefulWidget {
-  const _AppInitializer({
-    required this.router,
-    required this.child,
-  });
+  const _AppInitializer({required this.router, required this.child});
 
   final GoRouter router;
   final Widget child;
@@ -518,17 +519,17 @@ class _AppInitializerState extends State<_AppInitializer> {
     final authSession = context.read<AuthSessionProvider>();
     final userProfile = context.read<UserProfileProvider>();
     final authRepository = context.read<AuthRepository>();
-    
+
     // 从本地存储恢复会话
     await authSession.initialize();
-    
+
     // 从本地存储恢复用户信息缓存
     await userProfile.initialize();
 
     if (!mounted) {
       return;
     }
-    
+
     // 如果有有效的 token，跳转到首页
     if (authSession.isAuthenticated) {
       widget.router.go(HomePage.routePath);
