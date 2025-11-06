@@ -1,0 +1,3 @@
+curl -X POST http://localhost:8000/run \
+  -H "Content-Type: application/json" \
+  -d '{"input_as_text":"orgId:1,disciplineId:ONCOLOGY, 食管癌一线有没有合适的项目？"}'

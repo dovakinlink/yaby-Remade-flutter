@@ -38,6 +38,12 @@ class EnvConfig {
     defaultValue: 'http://127.0.0.1:8090',
   );
 
+  // AI 服务配置
+  static const String aiServiceHost = String.fromEnvironment(
+    'AI_SERVICE_HOST',
+    defaultValue: 'http://localhost:8200',
+  );
+
   /// 是否为生产环境
   static bool get isProduction => buildMode == 'production';
 

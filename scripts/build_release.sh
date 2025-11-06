@@ -1,15 +1,22 @@
 #!/bin/bash
 
 # 崖柏应用打包脚本
-# 使用方法: ./scripts/build_release.sh [生产环境API地址]
+# 使用方法:
+#   1) 仅指定业务 API 地址（向后兼容）：
+#        ./scripts/build_release.sh https://api.example.com:8090
+#   2) 同时指定业务 API 与 AI 服务地址：
+#        ./scripts/build_release.sh https://api.example.com:8090 https://ai.example.com:8200
 
 # 生产环境API地址（可以通过命令行参数传入）
 PROD_API="${1:-https://api.yabai.com}"
+# AI 服务地址（第二个参数；未传时使用默认 localhost:8200）
+AI_HOST="${2:-http://localhost:8200}"
 
 echo "================================"
 echo "   崖柏应用打包脚本"
 echo "================================"
 echo "生产环境API: $PROD_API"
+echo "AI 服务地址: $AI_HOST"
 echo "开始时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "================================"
 echo ""
@@ -28,7 +35,8 @@ echo ""
 echo "🤖 开始打包 Android APK..."
 flutter build apk --release \
   --dart-define=BUILD_MODE=production \
-  --dart-define=API_PRODUCTION_HOST="$PROD_API"
+  --dart-define=API_PRODUCTION_HOST="$PROD_API" \
+  --dart-define=AI_SERVICE_HOST="$AI_HOST"
 
 if [ $? -eq 0 ]; then
   echo "✅ Android APK 打包成功！"
@@ -43,7 +51,8 @@ echo ""
 echo "🤖 开始打包 Android App Bundle..."
 flutter build appbundle --release \
   --dart-define=BUILD_MODE=production \
-  --dart-define=API_PRODUCTION_HOST="$PROD_API"
+  --dart-define=API_PRODUCTION_HOST="$PROD_API" \
+  --dart-define=AI_SERVICE_HOST="$AI_HOST"
 
 if [ $? -eq 0 ]; then
   echo "✅ Android App Bundle 打包成功！"
@@ -57,7 +66,8 @@ echo ""
 echo "🍎 开始打包 iOS..."
 flutter build ios --release \
   --dart-define=BUILD_MODE=production \
-  --dart-define=API_PRODUCTION_HOST="$PROD_API"
+  --dart-define=API_PRODUCTION_HOST="$PROD_API" \
+  --dart-define=AI_SERVICE_HOST="$AI_HOST"
 
 if [ $? -eq 0 ]; then
   echo "✅ iOS 打包成功！"

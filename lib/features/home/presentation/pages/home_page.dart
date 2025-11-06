@@ -21,6 +21,9 @@ import 'package:yabai_app/features/messages/presentation/pages/message_list_page
 import 'package:yabai_app/features/screening/data/repositories/screening_repository.dart';
 import 'package:yabai_app/features/screening/providers/screening_list_provider.dart';
 import 'package:yabai_app/features/screening/presentation/pages/screening_list_page.dart';
+import 'package:yabai_app/features/ai/data/repositories/ai_repository.dart';
+import 'package:yabai_app/features/ai/providers/ai_query_provider.dart';
+import 'package:yabai_app/features/ai/presentation/pages/ai_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -153,11 +156,7 @@ class _HomePageState extends State<HomePage> {
           statsProvider: statsProvider,
         ),
         _buildLearningTab(),
-        _buildComingSoonTab(
-          title: 'AI',
-          description: '"AI"功能即将上线',
-          icon: Icons.psychology_alt_outlined,
-        ),
+        _buildAiTab(),
         _buildScreeningTab(),
         const ProfilePage(),
       ],
@@ -229,40 +228,19 @@ class _HomePageState extends State<HomePage> {
     return const _LearningTabView();
   }
 
+  Widget _buildAiTab() {
+    return ChangeNotifierProvider(
+      create: (context) => AiQueryProvider(context.read<AiRepository>()),
+      child: const AiPage(),
+    );
+  }
+
   Widget _buildScreeningTab() {
     return ChangeNotifierProvider(
       create: (context) =>
           ScreeningListProvider(context.read<ScreeningRepository>())
             ..loadInitial(),
       child: const ScreeningListPage(),
-    );
-  }
-
-  Widget _buildComingSoonTab({
-    required String title,
-    required String description,
-    required IconData icon,
-  }) {
-    return SafeArea(
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 64,
-              color: AppColors.brandGreen.withValues(alpha: 0.8),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Text(description, style: const TextStyle(color: Colors.grey)),
-          ],
-        ),
-      ),
     );
   }
 

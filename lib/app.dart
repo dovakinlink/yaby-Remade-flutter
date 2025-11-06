@@ -53,6 +53,7 @@ import 'package:yabai_app/features/messages/presentation/pages/message_list_page
 import 'package:yabai_app/features/messages/presentation/pages/message_detail_page.dart';
 import 'package:yabai_app/features/profile/providers/user_profile_detail_provider.dart';
 import 'package:yabai_app/features/profile/presentation/pages/user_profile_detail_page.dart';
+import 'package:yabai_app/features/ai/data/repositories/ai_repository.dart';
 
 class YabaiApp extends StatefulWidget {
   const YabaiApp({super.key});
@@ -477,6 +478,9 @@ class _YabaiAppState extends State<YabaiApp> {
                 ..loadUnreadCount(),
         ),
         ChangeNotifierProvider(create: (_) => LoginFormProvider()),
+        Provider(
+          create: (context) => AiRepository(),
+        ),
       ],
       child: _AppInitializer(
         router: _router,
