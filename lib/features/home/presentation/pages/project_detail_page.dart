@@ -8,6 +8,7 @@ import 'package:yabai_app/features/home/presentation/widgets/project_detail/proj
 import 'package:yabai_app/features/home/presentation/widgets/project_detail/project_files_section.dart';
 import 'package:yabai_app/features/home/presentation/widgets/project_detail/project_staff_section.dart';
 import 'package:yabai_app/features/home/presentation/widgets/project_detail/project_tags_section.dart';
+import 'package:yabai_app/features/home/providers/favorite_provider.dart';
 import 'package:yabai_app/features/home/providers/project_detail_provider.dart';
 import 'package:yabai_app/features/screening/presentation/pages/screening_submit_page.dart';
 
@@ -29,13 +30,41 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProjectDetailProvider>().loadDetail(widget.projectId);
+      context.read<FavoriteProvider>().checkFavoriteStatus(widget.projectId);
     });
+  }
+
+  Future<void> _toggleFavorite() async {
+    final favoriteProvider = context.read<FavoriteProvider>();
+    final success = await favoriteProvider.toggleFavorite(widget.projectId);
+    
+    if (!mounted) return;
+    
+    if (success) {
+      final message = favoriteProvider.isFavorited ? '收藏成功' : '取消收藏成功';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppColors.brandGreen,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(favoriteProvider.errorMessage ?? '操作失败'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final provider = context.watch<ProjectDetailProvider>();
+    final favoriteProvider = context.watch<FavoriteProvider>();
 
     return Scaffold(
       backgroundColor: isDark
@@ -48,6 +77,19 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
         backgroundColor: isDark
             ? AppColors.darkScaffoldBackground
             : const Color(0xFFF8F9FA),
+        actions: [
+          IconButton(
+            icon: Icon(
+              favoriteProvider.isFavorited
+                  ? Icons.favorite
+                  : Icons.favorite_border,
+              color: favoriteProvider.isFavorited
+                  ? Colors.red
+                  : (isDark ? Colors.white : Colors.black54),
+            ),
+            onPressed: favoriteProvider.isLoading ? null : _toggleFavorite,
+          ),
+        ],
       ),
       body: _buildBody(provider, isDark),
       floatingActionButton: provider.project != null && provider.project!.hasCriteria

@@ -80,30 +80,6 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     setState(() => _currentTab = index);
-    if (index == 2 && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('"${_tabLabel(index)}"功能即将上线'),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
-  String _tabLabel(int index) {
-    switch (index) {
-      case 1:
-        return '学习';
-      case 2:
-        return 'AI';
-      case 3:
-        return '筛查';
-      case 4:
-        return '我的';
-      default:
-        return '首页';
-    }
   }
 
   @override

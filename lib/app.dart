@@ -15,6 +15,7 @@ import 'package:yabai_app/features/auth/presentation/pages/login_page.dart';
 import 'package:yabai_app/features/home/data/models/announcement_model.dart';
 import 'package:yabai_app/features/home/data/repositories/announcement_repository.dart';
 import 'package:yabai_app/features/home/data/repositories/comment_repository.dart';
+import 'package:yabai_app/features/home/data/repositories/favorite_repository.dart';
 import 'package:yabai_app/features/home/data/repositories/post_repository.dart';
 import 'package:yabai_app/features/home/data/repositories/project_repository.dart';
 import 'package:yabai_app/features/home/data/repositories/project_statistics_repository.dart';
@@ -25,6 +26,7 @@ import 'package:yabai_app/features/home/presentation/pages/project_detail_page.d
 import 'package:yabai_app/features/home/presentation/pages/project_list_page.dart';
 import 'package:yabai_app/features/home/providers/comment_list_provider.dart';
 import 'package:yabai_app/features/home/providers/create_post_provider.dart';
+import 'package:yabai_app/features/home/providers/favorite_provider.dart';
 import 'package:yabai_app/features/home/providers/home_announcements_provider.dart';
 import 'package:yabai_app/features/home/providers/project_detail_provider.dart';
 import 'package:yabai_app/features/home/providers/project_list_provider.dart';
@@ -36,6 +38,7 @@ import 'package:yabai_app/features/screening/providers/screening_detail_provider
 import 'package:yabai_app/features/screening/providers/screening_submit_provider.dart';
 import 'package:yabai_app/features/home/data/models/project_criteria_model.dart';
 import 'package:yabai_app/features/profile/data/repositories/my_posts_repository.dart';
+import 'package:yabai_app/features/profile/providers/my_favorites_provider.dart';
 import 'package:yabai_app/features/profile/providers/my_posts_provider.dart';
 import 'package:yabai_app/features/profile/presentation/pages/profile_page.dart';
 import 'package:yabai_app/features/learning/data/models/learning_resource_model.dart';
@@ -98,6 +101,10 @@ class _YabaiAppState extends State<YabaiApp> {
                 ChangeNotifierProvider(
                   create: (context) =>
                       MyPostsProvider(context.read<MyPostsRepository>()),
+                ),
+                ChangeNotifierProvider(
+                  create: (context) =>
+                      MyFavoritesProvider(context.read<FavoriteRepository>()),
                 ),
               ],
               child: const HomePage(),
@@ -181,10 +188,19 @@ class _YabaiAppState extends State<YabaiApp> {
                       );
                     }
 
-                    return ChangeNotifierProvider(
-                      create: (context) => ProjectDetailProvider(
-                        context.read<ProjectRepository>(),
-                      ),
+                    return MultiProvider(
+                      providers: [
+                        ChangeNotifierProvider(
+                          create: (context) => ProjectDetailProvider(
+                            context.read<ProjectRepository>(),
+                          ),
+                        ),
+                        ChangeNotifierProvider(
+                          create: (context) => FavoriteProvider(
+                            context.read<FavoriteRepository>(),
+                          ),
+                        ),
+                      ],
                       child: ProjectDetailPage(projectId: id),
                     );
                   },
@@ -229,9 +245,17 @@ class _YabaiAppState extends State<YabaiApp> {
               path: ProfilePage.routePath,
               name: ProfilePage.routeName,
               builder: (context, state) {
-                return ChangeNotifierProvider(
-                  create: (context) =>
-                      MyPostsProvider(context.read<MyPostsRepository>()),
+                return MultiProvider(
+                  providers: [
+                    ChangeNotifierProvider(
+                      create: (context) =>
+                          MyPostsProvider(context.read<MyPostsRepository>()),
+                    ),
+                    ChangeNotifierProvider(
+                      create: (context) =>
+                          MyFavoritesProvider(context.read<FavoriteRepository>()),
+                    ),
+                  ],
                   child: const ProfilePage(),
                 );
               },
@@ -459,6 +483,9 @@ class _YabaiAppState extends State<YabaiApp> {
         ),
         Provider(
           create: (context) => CommentRepository(context.read<ApiClient>()),
+        ),
+        Provider(
+          create: (context) => FavoriteRepository(context.read<ApiClient>()),
         ),
         Provider(
           create: (context) =>

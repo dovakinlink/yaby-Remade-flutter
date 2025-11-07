@@ -147,7 +147,7 @@ class AiPage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              '未找到匹配的项目',
+              '暂无找到匹配的项目',
               style: TextStyle(
                 fontSize: 16,
                 color: isDark

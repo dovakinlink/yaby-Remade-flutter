@@ -24,6 +24,8 @@ class AppColors {
   static const darkSecondaryText = Color(0xFF9CA3AF);
 
   // 兼容性（保留原有的静态引用）
+  static const lightPrimaryText = lightNeutralText;
+  static const darkPrimaryText = darkNeutralText;
   static const neutralText = lightNeutralText;
   static const fieldBackground = lightFieldBackground;
   static const fieldBorder = lightFieldBorder;

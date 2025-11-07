@@ -28,5 +28,11 @@ class AiProjectModel {
       'is_match': isMatch,
     };
   }
+
+  /// 获取项目ID（project_code 转换为 int）
+  /// 如果转换失败，返回 null
+  int? get projectId {
+    return int.tryParse(projectCode);
+  }
 }
 

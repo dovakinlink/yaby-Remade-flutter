@@ -12,6 +12,8 @@ import 'package:yabai_app/features/auth/providers/user_profile_provider.dart';
 import 'package:yabai_app/features/home/presentation/pages/announcement_detail_page.dart';
 import 'package:yabai_app/features/home/presentation/widgets/feed_card.dart';
 import 'package:yabai_app/features/profile/presentation/widgets/change_password_sheet.dart';
+import 'package:yabai_app/features/profile/presentation/widgets/my_favorites_tab.dart';
+import 'package:yabai_app/features/profile/providers/my_favorites_provider.dart';
 import 'package:yabai_app/features/profile/providers/my_posts_provider.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -33,13 +35,14 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _scrollController = ScrollController()..addListener(_handleScroll);
 
     // 刷新用户信息
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<UserProfileProvider>().loadProfile();
       context.read<MyPostsProvider>().loadInitial();
+      context.read<MyFavoritesProvider>().loadInitial();
     });
   }
 
@@ -53,15 +56,23 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   void _handleScroll() {
-    if (_tabController.index != 0) return;
     if (!_scrollController.hasClients) return;
-
-    final provider = context.read<MyPostsProvider>();
-    if (!provider.hasNext || provider.isLoadingMore) return;
 
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - 160) {
-      unawaited(provider.loadMore());
+      if (_tabController.index == 0) {
+        // 我的帖子
+        final provider = context.read<MyPostsProvider>();
+        if (provider.hasNext && !provider.isLoadingMore) {
+          unawaited(provider.loadMore());
+        }
+      } else if (_tabController.index == 1) {
+        // 我的收藏
+        final provider = context.read<MyFavoritesProvider>();
+        if (provider.hasNext && !provider.isLoadingMore) {
+          unawaited(provider.loadMore());
+        }
+      }
     }
   }
 
@@ -90,6 +101,7 @@ class _ProfilePageState extends State<ProfilePage>
                 indicatorColor: AppColors.brandGreen,
                 tabs: const [
                   Tab(text: '我的帖子'),
+                  Tab(text: '我的收藏'),
                   Tab(text: '设置'),
                 ],
               ),
@@ -100,6 +112,7 @@ class _ProfilePageState extends State<ProfilePage>
                 controller: _tabController,
                 children: [
                   _buildMyPostsTab(),
+                  const MyFavoritesTab(),
                   _buildSettingsTab(isDark),
                 ],
               ),
