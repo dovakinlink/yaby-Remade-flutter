@@ -185,6 +185,10 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            SliverToBoxAdapter(
+              child: _buildQuickActionsRow(isDark),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ..._buildTagFilterSlivers(announcementsProvider),
             ..._buildFeedSlivers(announcementsProvider),
             SliverToBoxAdapter(
@@ -217,6 +221,100 @@ class _HomePageState extends State<HomePage> {
           ScreeningListProvider(context.read<ScreeningRepository>())
             ..loadInitial(),
       child: const ScreeningListPage(),
+    );
+  }
+
+  void _handleQuickActionTap(String label) {
+    switch (label) {
+      case '通讯录':
+        context.pushNamed('address-book');
+        break;
+      case '用药预约':
+      case '质控任务':
+      case '护理备忘':
+        // TODO: 未来实现其他功能
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$label功能开发中'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        break;
+    }
+  }
+
+  Widget _buildQuickActionsRow(bool isDark) {
+    const actions = <Map<String, String>>[
+      {
+        'label': '通讯录',
+        'asset': 'assets/icons/tongxunlu.png',
+        'darkAsset': 'assets/icons/tongxunlu-white.png',
+      },
+      {
+        'label': '用药预约',
+        'asset': 'assets/icons/hulibeiwang.png',
+        'darkAsset': 'assets/icons/hulibeiwang-white.png',
+      },
+      {
+        'label': '质控任务',
+        'asset': 'assets/icons/zhikongrenwu.png',
+        'darkAsset': 'assets/icons/zhikongrenwu-white.png',
+      },
+      {
+        'label': '护理备忘',
+        'asset': 'assets/icons/hulibeiwang.png',
+        'darkAsset': 'assets/icons/hulibeiwang-white.png',
+      },
+    ];
+
+    final labelStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: isDark ? AppColors.darkNeutralText : const Color(0xFF4B5563),
+        );
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCardBackground : Colors.white,
+      ),
+      child: Row(
+        children: actions
+            .map(
+              (action) => Expanded(
+                child: InkWell(
+                  onTap: () => _handleQuickActionTap(action['label']!),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          height: 48,
+                          width: 48,
+                          child: Image.asset(
+                            isDark
+                                ? (action['darkAsset'] ?? action['asset'])!
+                                : action['asset']!,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          action['label']!,
+                          style: labelStyle,
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )
+            .toList(),
+      ),
     );
   }
 

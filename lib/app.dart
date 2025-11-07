@@ -57,6 +57,11 @@ import 'package:yabai_app/features/messages/presentation/pages/message_detail_pa
 import 'package:yabai_app/features/profile/providers/user_profile_detail_provider.dart';
 import 'package:yabai_app/features/profile/presentation/pages/user_profile_detail_page.dart';
 import 'package:yabai_app/features/ai/data/repositories/ai_repository.dart';
+import 'package:yabai_app/features/address_book/data/repositories/address_book_repository.dart';
+import 'package:yabai_app/features/address_book/providers/address_book_provider.dart';
+import 'package:yabai_app/features/address_book/providers/patient_lookup_provider.dart';
+import 'package:yabai_app/features/address_book/presentation/pages/address_book_page.dart';
+import 'package:yabai_app/features/address_book/presentation/pages/patient_lookup_page.dart';
 
 class YabaiApp extends StatefulWidget {
   const YabaiApp({super.key});
@@ -259,6 +264,32 @@ class _YabaiAppState extends State<YabaiApp> {
                   child: const ProfilePage(),
                 );
               },
+            ),
+            GoRoute(
+              path: AddressBookPage.routePath,
+              name: AddressBookPage.routeName,
+              builder: (context, state) {
+                return ChangeNotifierProvider(
+                  create: (context) => AddressBookProvider(
+                    context.read<AddressBookRepository>(),
+                  ),
+                  child: const AddressBookPage(),
+                );
+              },
+              routes: [
+                GoRoute(
+                  path: PatientLookupPage.routePath,
+                  name: PatientLookupPage.routeName,
+                  builder: (context, state) {
+                    return ChangeNotifierProvider(
+                      create: (context) => PatientLookupProvider(
+                        context.read<AddressBookRepository>(),
+                      ),
+                      child: const PatientLookupPage(),
+                    );
+                  },
+                ),
+              ],
             ),
             GoRoute(
               path: LearningResourceListPage.routePath,
@@ -507,6 +538,9 @@ class _YabaiAppState extends State<YabaiApp> {
         ChangeNotifierProvider(create: (_) => LoginFormProvider()),
         Provider(
           create: (context) => AiRepository(),
+        ),
+        Provider(
+          create: (context) => AddressBookRepository(context.read<ApiClient>()),
         ),
       ],
       child: _AppInitializer(

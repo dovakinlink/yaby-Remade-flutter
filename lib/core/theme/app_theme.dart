@@ -22,6 +22,7 @@ class AppColors {
   static const darkCardBackground = Color(0xFF333333);
   static const darkDividerColor = Color(0xFF374151);
   static const darkSecondaryText = Color(0xFF9CA3AF);
+  static const darkBackground = darkScaffoldBackground;
 
   // 兼容性（保留原有的静态引用）
   static const lightPrimaryText = lightNeutralText;
