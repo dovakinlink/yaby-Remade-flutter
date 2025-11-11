@@ -7,14 +7,16 @@ class HomeBottomNav extends StatelessWidget {
     super.key,
     required this.currentIndex,
     required this.onTap,
+    this.unreadCount = 0, // IM未读消息数
   });
 
   final int currentIndex;
   final ValueChanged<int> onTap;
+  final int unreadCount;
 
   static const _items = <_NavItemData>[
     _NavItemData('assets/icons/tab_home.svg', '首页'),
-    _NavItemData('assets/icons/tab_learn.svg', '学习'),
+    _NavItemData('assets/icons/tab_bell.svg', '聊天'),
     _NavItemData('assets/icons/tab_ai.svg', 'AI'),
     _NavItemData('assets/icons/tab_search.svg', '筛查'),
     _NavItemData('assets/icons/tab_user.svg', '我的'),
@@ -34,6 +36,45 @@ class HomeBottomNav extends StatelessWidget {
               ? AppColors.darkSecondaryText 
               : const Color(0xFF94A3B8),
     );
+
+    // 聊天tab（index=1）显示未读消息角标
+    if (index == 1 && unreadCount > 0) {
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          iconWidget,
+          Positioned(
+            right: -8,
+            top: -4,
+            child: Container(
+              constraints: const BoxConstraints(
+                minWidth: 18,
+                minHeight: 18,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(
+                  color: isDark ? AppColors.darkCardBackground : Colors.white,
+                  width: 1.5,
+                ),
+              ),
+              child: Text(
+                unreadCount > 99 ? '99+' : '$unreadCount',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
 
     return iconWidget;
   }

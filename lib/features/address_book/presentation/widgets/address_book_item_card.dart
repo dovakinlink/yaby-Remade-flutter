@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/address_book/data/models/address_book_item_model.dart';
+import 'package:yabai_app/features/im/providers/conversation_list_provider.dart';
+import 'package:yabai_app/features/im/presentation/pages/chat_page.dart';
 
 class AddressBookItemCard extends StatelessWidget {
   const AddressBookItemCard({
@@ -27,19 +32,62 @@ class AddressBookItemCard extends StatelessWidget {
     }
   }
 
-  Future<void> _sendEmail(BuildContext context, String email) async {
-    final url = Uri.parse('mailto:$email');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url);
-    } else {
+  /// 发送私信 - 创建单聊会话
+  Future<void> _sendPrivateMessage(BuildContext context, AddressBookItemModel item) async {
+    try {
+      // 检查是否有userId（联系人类型没有userId，无法发起IM单聊）
+      if (item.userId == null) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                item.isFromContact 
+                  ? '该联系人没有系统账号，无法发起单聊' 
+                  : '无法获取用户ID，无法发起单聊'
+              ),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
+      }
+
+      // 显示加载提示
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('无法发送邮件'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 2),
+          content: Text('正在创建会话...'),
+          duration: Duration(seconds: 1),
         ),
       );
+
+      // 创建单聊会话
+      final conversationProvider = context.read<ConversationListProvider>();
+      final conversation = await conversationProvider.createSingleConversation(item.userId!);
+
+      // 跳转到聊天页面
+      if (context.mounted) {
+        context.pushNamed(
+          ChatPage.routeName,
+          pathParameters: {
+            'convId': conversation.convId,
+          },
+          queryParameters: {
+            'title': item.name,
+          },
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('创建会话失败: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -95,33 +143,37 @@ class AddressBookItemCard extends StatelessWidget {
                   _makePhoneCall(context, item.phone);
                 },
               ),
-              if (item.email != null && item.email!.isNotEmpty)
-                ListTile(
-                  leading: Icon(
-                    Icons.email,
-                    color: AppColors.brandGreen,
-                  ),
-                  title: Text(
-                    '发送邮件',
-                    style: TextStyle(
-                      color: isDark
-                          ? AppColors.darkNeutralText
-                          : Colors.black87,
-                    ),
-                  ),
-                  subtitle: Text(
-                    item.email!,
-                    style: TextStyle(
-                      color: isDark
-                          ? AppColors.darkSecondaryText
-                          : Colors.grey[600],
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _sendEmail(context, item.email!);
-                  },
+              ListTile(
+                leading: Icon(
+                  Icons.chat_bubble_outline,
+                  color: item.canStartImChat 
+                    ? AppColors.brandGreen 
+                    : (isDark ? AppColors.darkSecondaryText : Colors.grey),
                 ),
+                title: Text(
+                  '发送私信',
+                  style: TextStyle(
+                    color: item.canStartImChat
+                      ? (isDark ? AppColors.darkNeutralText : Colors.black87)
+                      : (isDark ? AppColors.darkSecondaryText : Colors.grey),
+                  ),
+                ),
+                subtitle: Text(
+                  item.canStartImChat 
+                    ? '发起单聊会话' 
+                    : (item.isFromContact ? '该联系人无系统账号' : '无法获取用户ID'),
+                  style: TextStyle(
+                    color: isDark
+                        ? AppColors.darkSecondaryText
+                        : Colors.grey[600],
+                  ),
+                ),
+                onTap: item.canStartImChat ? () {
+                  Navigator.pop(context);
+                  _sendPrivateMessage(context, item);
+                } : null, // 不可用时 onTap 为 null
+                enabled: item.canStartImChat, // 添加 enabled 属性
+              ),
               const SizedBox(height: 8),
             ],
           ),
@@ -133,6 +185,12 @@ class AddressBookItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final apiClient = context.read<ApiClient>();
+    
+    // 使用ApiClient解析头像URL并获取认证头
+    final resolvedAvatarUrl = item.avatar != null && item.avatar!.isNotEmpty
+        ? apiClient.resolveUrlSync(item.avatar!)
+        : null;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -157,11 +215,14 @@ class AddressBookItemCard extends StatelessWidget {
                     color: AppColors.brandGreen.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: item.avatar != null && item.avatar!.isNotEmpty
+                  child: resolvedAvatarUrl != null
                       ? ClipOval(
                           child: Image.network(
-                            item.avatar!,
+                            resolvedAvatarUrl,
+                            width: 48,
+                            height: 48,
                             fit: BoxFit.cover,
+                            headers: apiClient.getAuthHeaders(),
                             errorBuilder: (context, error, stackTrace) {
                               return Center(
                                 child: Text(
@@ -208,7 +269,7 @@ class AddressBookItemCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (item.roleName != null && item.roleName!.trim().isNotEmpty)
+                          if (item.displayRoleName != null && item.displayRoleName!.trim().isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(left: 8),
                               child: Container(
@@ -221,7 +282,7 @@ class AddressBookItemCard extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  item.roleName!,
+                                  item.displayRoleName!,
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: AppColors.brandGreen,

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
+import 'package:yabai_app/core/config/env_config.dart';
 import 'package:yabai_app/features/home/presentation/pages/announcement_detail_page.dart';
 import 'package:yabai_app/features/home/presentation/widgets/feed_card.dart';
 import 'package:yabai_app/features/home/presentation/widgets/home_bottom_nav.dart';
@@ -12,11 +13,7 @@ import 'package:yabai_app/features/home/presentation/widgets/search_stats_card.d
 import 'package:yabai_app/features/home/presentation/widgets/notice_tag_filter.dart';
 import 'package:yabai_app/features/home/providers/home_announcements_provider.dart';
 import 'package:yabai_app/features/home/providers/project_statistics_provider.dart';
-import 'package:intl/intl.dart';
 import 'package:yabai_app/features/profile/presentation/pages/profile_page.dart';
-import 'package:yabai_app/features/learning/data/models/learning_resource_model.dart';
-import 'package:yabai_app/features/learning/presentation/pages/learning_resource_detail_page.dart';
-import 'package:yabai_app/features/learning/providers/learning_resource_list_provider.dart';
 import 'package:yabai_app/features/messages/presentation/pages/message_list_page.dart';
 import 'package:yabai_app/features/screening/data/repositories/screening_repository.dart';
 import 'package:yabai_app/features/screening/providers/screening_list_provider.dart';
@@ -24,6 +21,10 @@ import 'package:yabai_app/features/screening/presentation/pages/screening_list_p
 import 'package:yabai_app/features/ai/data/repositories/ai_repository.dart';
 import 'package:yabai_app/features/ai/providers/ai_query_provider.dart';
 import 'package:yabai_app/features/ai/presentation/pages/ai_page.dart';
+import 'package:yabai_app/features/im/presentation/pages/conversation_list_page.dart';
+import 'package:yabai_app/features/im/providers/websocket_provider.dart';
+import 'package:yabai_app/features/im/providers/unread_count_provider.dart';
+import 'package:yabai_app/features/auth/providers/auth_session_provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -39,6 +40,7 @@ class _HomePageState extends State<HomePage> {
   late final ScrollController _scrollController;
   int _currentTab = 0;
   static const _placeholderValue = '--';
+  Timer? _unreadCountTimer; // IM未读消息定时器
 
   @override
   void initState() {
@@ -48,7 +50,64 @@ class _HomePageState extends State<HomePage> {
     // 加载标签列表
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HomeAnnouncementsProvider>().loadAnnouncementTags();
+      // 检查并连接 WebSocket
+      _ensureWebSocketConnection();
+      // 加载IM未读消息总数
+      _loadUnreadCount();
+      // 启动定时器，每1分钟更新一次未读消息总数
+      _startUnreadCountTimer();
     });
+  }
+
+  /// 确保 WebSocket 已连接
+  Future<void> _ensureWebSocketConnection() async {
+    try {
+      final websocketProvider = context.read<WebSocketProvider>();
+      final authSession = context.read<AuthSessionProvider>();
+      
+      // 如果未登录或已连接，则不处理
+      if (!authSession.isAuthenticated || websocketProvider.isConnected || websocketProvider.isConnecting) {
+        return;
+      }
+      
+      final tokens = authSession.tokens;
+      if (tokens == null) {
+        return;
+      }
+      
+      final baseUrl = await EnvConfig.resolveApiBaseUrl();
+      final uri = Uri.parse(baseUrl);
+      final host = uri.host;
+      final port = uri.port;
+      
+      debugPrint('WebSocket: 首页自动连接 - host: $host, port: $port');
+      
+      websocketProvider.connect(host, port, tokens.accessToken).catchError((e) {
+        debugPrint('WebSocket: 自动连接失败 - $e');
+      });
+    } catch (e) {
+      debugPrint('WebSocket: 检查连接失败 - $e');
+    }
+  }
+
+  /// 加载IM未读消息总数
+  void _loadUnreadCount() {
+    if (mounted) {
+      context.read<UnreadCountProvider>().loadUnreadCount();
+    }
+  }
+
+  /// 启动IM未读消息定时器（每1分钟更新一次）
+  void _startUnreadCountTimer() {
+    _unreadCountTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      _loadUnreadCount();
+    });
+  }
+
+  /// 停止IM未读消息定时器
+  void _stopUnreadCountTimer() {
+    _unreadCountTimer?.cancel();
+    _unreadCountTimer = null;
   }
 
   @override
@@ -56,6 +115,7 @@ class _HomePageState extends State<HomePage> {
     _scrollController
       ..removeListener(_handleScroll)
       ..dispose();
+    _stopUnreadCountTimer(); // 停止IM未读消息定时器
     super.dispose();
   }
 
@@ -111,9 +171,14 @@ class _HomePageState extends State<HomePage> {
         announcementsProvider: announcementsProvider,
         statsProvider: statsProvider,
       ),
-      bottomNavigationBar: HomeBottomNav(
-        currentIndex: _currentTab,
-        onTap: _onTapTab,
+      bottomNavigationBar: Consumer<UnreadCountProvider>(
+        builder: (context, unreadCountProvider, child) {
+          return HomeBottomNav(
+            currentIndex: _currentTab,
+            onTap: _onTapTab,
+            unreadCount: unreadCountProvider.unreadCount,
+          );
+        },
       ),
     );
   }
@@ -131,7 +196,7 @@ class _HomePageState extends State<HomePage> {
           announcementsProvider: announcementsProvider,
           statsProvider: statsProvider,
         ),
-        _buildLearningTab(),
+        _buildImTab(),
         _buildAiTab(),
         _buildScreeningTab(),
         const ProfilePage(),
@@ -149,7 +214,12 @@ class _HomePageState extends State<HomePage> {
         onRefresh: () async {
           final announcements = context.read<HomeAnnouncementsProvider>();
           final statistics = context.read<ProjectStatisticsProvider>();
-          await Future.wait([announcements.refresh(), statistics.refresh()]);
+          final unreadCount = context.read<UnreadCountProvider>();
+          await Future.wait([
+            announcements.refresh(),
+            statistics.refresh(),
+            unreadCount.loadUnreadCount(), // 刷新IM未读消息总数
+          ]);
         },
         backgroundColor: isDark ? AppColors.darkCardBackground : Colors.white,
         color: AppColors.brandGreen,
@@ -204,8 +274,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildLearningTab() {
-    return const _LearningTabView();
+  Widget _buildImTab() {
+    // IM 会话列表页面
+    return const ConversationListPage();
   }
 
   Widget _buildAiTab() {
@@ -230,8 +301,12 @@ class _HomePageState extends State<HomePage> {
         context.pushNamed('address-book');
         break;
       case '用药预约':
+        context.pushNamed('med-appt');
+        break;
+      case '学习中心':
+        context.pushNamed('learning'); // 学习资源列表页面
+        break;
       case '质控任务':
-      case '护理备忘':
         // TODO: 未来实现其他功能
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -261,7 +336,7 @@ class _HomePageState extends State<HomePage> {
         'darkAsset': 'assets/icons/zhikongrenwu-white.png',
       },
       {
-        'label': '护理备忘',
+        'label': '学习中心',
         'asset': 'assets/icons/hulibeiwang.png',
         'darkAsset': 'assets/icons/hulibeiwang-white.png',
       },
@@ -518,292 +593,3 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-class _LearningTabView extends StatefulWidget {
-  const _LearningTabView();
-
-  @override
-  State<_LearningTabView> createState() => _LearningTabViewState();
-}
-
-class _LearningTabViewState extends State<_LearningTabView> {
-  late final ScrollController _scrollController;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController = ScrollController()..addListener(_handleScroll);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<LearningResourceListProvider>();
-      provider.loadInitial();
-    });
-  }
-
-  @override
-  void dispose() {
-    _scrollController
-      ..removeListener(_handleScroll)
-      ..dispose();
-    super.dispose();
-  }
-
-  void _handleScroll() {
-    if (!_scrollController.hasClients) return;
-
-    final provider = context.read<LearningResourceListProvider>();
-    if (!provider.hasNext || provider.isLoadingMore) return;
-
-    final position = _scrollController.position;
-    if (position.pixels >= position.maxScrollExtent - 160) {
-      unawaited(provider.loadMore());
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Column(
-      children: [
-        // 标题栏
-        Container(
-          color: isDark ? AppColors.darkCardBackground : Colors.white,
-          child: SafeArea(
-            bottom: false,
-            child: Container(
-              height: 64,
-              alignment: Alignment.center,
-              child: const Text(
-                '学习资源中心',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ),
-        // 内容区域
-        Expanded(
-          child: Consumer<LearningResourceListProvider>(
-            builder: (context, provider, child) {
-              return RefreshIndicator(
-                onRefresh: provider.refresh,
-                backgroundColor: isDark
-                    ? AppColors.darkCardBackground
-                    : Colors.white,
-                color: AppColors.brandGreen,
-                child: _buildBody(provider, isDark),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBody(LearningResourceListProvider provider, bool isDark) {
-    if (provider.isInitialLoading && provider.resources.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation(AppColors.brandGreen),
-        ),
-      );
-    }
-
-    if (provider.errorMessage != null && provider.resources.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              provider.errorMessage!,
-              style: TextStyle(color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => provider.refresh(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.brandGreen,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('重试'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (provider.resources.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.school_outlined, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              '暂无学习资源',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.separated(
-      controller: _scrollController,
-      physics: const BouncingScrollPhysics(
-        parent: AlwaysScrollableScrollPhysics(),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      itemCount: provider.resources.length + (provider.hasNext ? 1 : 0),
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        if (index == provider.resources.length) {
-          return _buildLoadMoreIndicator(provider);
-        }
-
-        final resource = provider.resources[index];
-        return _buildResourceCard(resource, isDark);
-      },
-    );
-  }
-
-  Widget _buildResourceCard(LearningResource resource, bool isDark) {
-    final dateFormat = DateFormat('yyyy-MM-dd');
-
-    final displayedDate = resource.updatedAt;
-
-    return Material(
-      color: isDark ? AppColors.darkCardBackground : Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      elevation: isDark ? 0 : 2,
-      child: InkWell(
-        onTap: () {
-          context.pushNamed(
-            LearningResourceDetailPage.routeName,
-            pathParameters: {'id': '${resource.id}'},
-            extra: resource,
-          );
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.brandGreen.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.school,
-                      color: AppColors.brandGreen,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      resource.name,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.darkNeutralText : null,
-                      ),
-                    ),
-                  ),
-                  Icon(Icons.chevron_right, color: Colors.grey[400]),
-                ],
-              ),
-              if (resource.remark != null && resource.remark!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(
-                  resource.remark!,
-                  style: TextStyle(
-                    color: isDark
-                        ? AppColors.darkSecondaryText
-                        : Colors.grey[600],
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Icon(
-                    Icons.access_time,
-                    size: 14,
-                    color: isDark
-                        ? AppColors.darkSecondaryText
-                        : Colors.grey[500],
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    dateFormat.format(displayedDate),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark
-                          ? AppColors.darkSecondaryText
-                          : Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoadMoreIndicator(LearningResourceListProvider provider) {
-    if (provider.isLoadingMore) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-          child: SizedBox(
-            width: 26,
-            height: 26,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation(AppColors.brandGreen),
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (provider.loadMoreError != null) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-          child: Column(
-            children: [
-              Text(
-                provider.loadMoreError!,
-                style: const TextStyle(color: Color(0xFFEF4444)),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: () => provider.loadMore(),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.brandGreen,
-                ),
-                child: const Text('重试加载'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 24),
-      child: Center(
-        child: Text('已经浏览完全部内容', style: TextStyle(color: Color(0xFF94A3B8))),
-      ),
-    );
-  }
-}

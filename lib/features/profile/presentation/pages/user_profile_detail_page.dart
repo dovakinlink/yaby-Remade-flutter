@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,6 +8,8 @@ import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/core/widgets/animated_medical_background.dart';
 import 'package:yabai_app/features/profile/data/models/user_profile_model.dart';
 import 'package:yabai_app/features/profile/providers/user_profile_detail_provider.dart';
+import 'package:yabai_app/features/im/providers/conversation_list_provider.dart';
+import 'package:yabai_app/features/im/presentation/pages/chat_page.dart';
 
 /// 用户详情页面
 class UserProfileDetailPage extends StatefulWidget {
@@ -304,14 +307,12 @@ class _UserProfileDetailPageState extends State<UserProfileDetailPage> {
             ),
             const SizedBox(width: 12),
 
-            // 发送邮件
+            // 发送私信
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: profile.email != null && profile.email!.isNotEmpty
-                    ? () => _sendEmail(profile.email!)
-                    : null,
-                icon: const Icon(Icons.email),
-                label: const Text('发送邮件'),
+                onPressed: () => _sendPrivateMessage(profile),
+                icon: const Icon(Icons.chat_bubble_outline),
+                label: const Text('发送私信'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.brandGreen,
                   side: const BorderSide(color: AppColors.brandGreen),
@@ -440,14 +441,39 @@ class _UserProfileDetailPageState extends State<UserProfileDetailPage> {
     }
   }
 
-  void _sendEmail(String email) async {
-    final uri = Uri(scheme: 'mailto', path: email);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
+  /// 发送私信 - 创建单聊会话
+  void _sendPrivateMessage(UserProfileModel profile) async {
+    try {
+      // 显示加载提示
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('无法发送邮件')),
+          const SnackBar(
+            content: Text('正在创建会话...'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+
+      // 创建单聊会话
+      final conversationProvider = context.read<ConversationListProvider>();
+      final conversation = await conversationProvider.createSingleConversation(profile.id);
+
+      // 跳转到聊天页面
+      if (mounted) {
+        context.pushNamed(
+          ChatPage.routeName,
+          pathParameters: {
+            'convId': conversation.convId,
+          },
+          queryParameters: {
+            'title': profile.nickname.isNotEmpty ? profile.nickname : profile.username,
+          },
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('创建会话失败: $e')),
         );
       }
     }

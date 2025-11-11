@@ -66,6 +66,7 @@ Authorization: Bearer {accessToken}
       "items": [
         {
           "pk": "abc123",
+          "userId": 5,
           "name": "安娜",
           "nameInitial": "A",
           "phone": "13800138001",
@@ -78,6 +79,7 @@ Authorization: Bearer {accessToken}
         },
         {
           "pk": "abc124",
+          "userId": 8,
           "name": "安迪",
           "nameInitial": "A",
           "phone": "13800138002",
@@ -95,6 +97,7 @@ Authorization: Bearer {accessToken}
       "items": [
         {
           "pk": "xyz789",
+          "userId": 12,
           "name": "张三",
           "nameInitial": "Z",
           "phone": "13900139002",
@@ -107,6 +110,7 @@ Authorization: Bearer {accessToken}
         },
         {
           "pk": "xyz790",
+          "userId": 15,
           "name": "赵丽",
           "nameInitial": "Z",
           "phone": "13900139003",
@@ -124,6 +128,7 @@ Authorization: Bearer {accessToken}
       "items": [
         {
           "pk": "999",
+          "userId": null,
           "name": "123医疗公司",
           "nameInitial": "#",
           "phone": "400-123-4567",
@@ -164,6 +169,7 @@ Authorization: Bearer {accessToken}
 | 字段名 | 类型 | 说明 |
 |--------|------|------|
 | pk | String | 主键ID（人员UUID或联系人ID） |
+| userId | Long | 用户ID（t_user.id），用于IM单聊，联系人类型为null |
 | name | String | 姓名 |
 | nameInitial | String | 姓名首字母（A-Z或#） |
 | phone | String | 手机号 |
@@ -214,6 +220,7 @@ class AddressBookGroup {
 
 class AddressBookItem {
   final String pk;
+  final int? userId;  // 用户ID，用于IM单聊（联系人为null）
   final String name;
   final String nameInitial;
   final String phone;
@@ -226,6 +233,7 @@ class AddressBookItem {
 
   AddressBookItem({
     required this.pk,
+    this.userId,
     required this.name,
     required this.nameInitial,
     required this.phone,
@@ -240,6 +248,7 @@ class AddressBookItem {
   factory AddressBookItem.fromJson(Map<String, dynamic> json) {
     return AddressBookItem(
       pk: json['pk'],
+      userId: json['userId'],
       name: json['name'],
       nameInitial: json['nameInitial'],
       phone: json['phone'],
@@ -300,6 +309,7 @@ Authorization: Bearer {accessToken}
   "data": [
     {
       "pk": "xyz789",
+      "userId": 12,
       "name": "张三",
       "nameInitial": "Z",
       "phone": "13900139002",
@@ -312,6 +322,7 @@ Authorization: Bearer {accessToken}
     },
     {
       "pk": "xyz790",
+      "userId": 15,
       "name": "张丽",
       "nameInitial": "Z",
       "phone": "13800138003",
@@ -428,6 +439,7 @@ Authorization: Bearer {accessToken}
   "data": [
     {
       "pk": "abc123",
+      "userId": 5,
       "name": "李四",
       "nameInitial": "L",
       "phone": "13700137001",
@@ -440,6 +452,7 @@ Authorization: Bearer {accessToken}
     },
     {
       "pk": "def456",
+      "userId": 8,
       "name": "王五",
       "nameInitial": "W",
       "phone": "13700137002",
@@ -481,6 +494,7 @@ Authorization: Bearer {accessToken}
 | 字段名 | 类型 | 说明 |
 |--------|------|------|
 | pk | String | CRC人员ID |
+| userId | Long | 用户ID（t_user.id），用于IM单聊 |
 | name | String | CRC姓名 |
 | nameInitial | String | 姓名首字母（A-Z或#） |
 | phone | String | 手机号 |
@@ -1014,6 +1028,47 @@ class _PatientCrcLookupPageState extends State<PatientCrcLookupPage> {
 
 7. **srcType字段**：用于区分数据来源（PERSON-人员表，CONTACT-联系人表），前端可以根据需要做不同展示。
 
+8. **userId字段**：
+   - 对于来自人员表（srcType = PERSON）的记录，userId 是该人员对应的用户ID（t_user.id）
+   - 对于来自联系人表（srcType = CONTACT）的记录，userId 为 null（因为联系人没有用户账号）
+   - **IM集成**：在通讯录点击用户发起单聊时，使用 userId 调用 IM 模块的创建单聊接口 `/api/v1/im/conversations/single`
+   - 如果 userId 为 null，说明该联系人没有系统账号，无法发起 IM 单聊
+
+9. **IM单聊集成示例**：
+   ```dart
+   // 点击通讯录项，发起IM单聊
+   void onAddressBookItemTap(AddressBookItem item) {
+     if (item.userId != null) {
+       // 有userId，可以发起IM单聊
+       createSingleChat(item.userId!);
+     } else {
+       // 无userId（联系人类型），只能拨打电话或发邮件
+       showContactActions(item);
+     }
+   }
+   
+   // 调用IM创建单聊接口
+   Future<void> createSingleChat(int targetUserId) async {
+     final response = await http.post(
+       Uri.parse('http://localhost:8090/api/v1/im/conversations/single'),
+       headers: {
+         'Content-Type': 'application/json',
+         'Authorization': 'Bearer $accessToken'
+       },
+       body: jsonEncode({
+         'targetUserId': targetUserId
+       }),
+     );
+     
+     final result = jsonDecode(response.body);
+     if (result['success']) {
+       final conversationId = result['data']['conversationId'];
+       // 跳转到聊天页面
+       navigateToChatPage(conversationId);
+     }
+   }
+   ```
+
 ---
 
 ## 角色代码对照表
@@ -1130,6 +1185,12 @@ void main() async {
 ---
 
 ## 更新日志
+
+- **2025-11-11**: 添加 userId 字段支持 IM 单聊
+  - 在所有接口响应中添加 userId 字段
+  - userId 用于在通讯录中点击用户发起 IM 单聊
+  - 更新 v_address_book 视图，关联 t_user 表获取 user_id
+  - PERSON 类型记录包含 userId，CONTACT 类型记录 userId 为 null
 
 - **2025-11-07**: 初始版本，实现三个核心接口
   - 获取通讯录列表（按首字母分组）

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:yabai_app/core/network/api_client.dart';
@@ -62,6 +63,20 @@ import 'package:yabai_app/features/address_book/providers/address_book_provider.
 import 'package:yabai_app/features/address_book/providers/patient_lookup_provider.dart';
 import 'package:yabai_app/features/address_book/presentation/pages/address_book_page.dart';
 import 'package:yabai_app/features/address_book/presentation/pages/patient_lookup_page.dart';
+import 'package:yabai_app/features/med_appt/data/repositories/med_appt_repository.dart';
+import 'package:yabai_app/features/med_appt/providers/med_appt_list_provider.dart';
+import 'package:yabai_app/features/med_appt/providers/med_appt_create_provider.dart';
+import 'package:yabai_app/features/med_appt/providers/project_selection_provider.dart';
+import 'package:yabai_app/features/med_appt/presentation/pages/med_appt_list_page.dart';
+import 'package:yabai_app/features/med_appt/presentation/pages/med_appt_create_page.dart';
+import 'package:yabai_app/features/med_appt/presentation/pages/project_selection_page.dart';
+import 'package:yabai_app/features/im/data/repositories/im_repository.dart';
+import 'package:yabai_app/features/im/data/services/websocket_service.dart';
+import 'package:yabai_app/features/im/providers/websocket_provider.dart';
+import 'package:yabai_app/features/im/providers/conversation_list_provider.dart';
+import 'package:yabai_app/features/im/providers/chat_provider.dart';
+import 'package:yabai_app/features/im/providers/unread_count_provider.dart';
+import 'package:yabai_app/features/im/presentation/pages/chat_page.dart';
 
 class YabaiApp extends StatefulWidget {
   const YabaiApp({super.key});
@@ -426,6 +441,71 @@ class _YabaiAppState extends State<YabaiApp> {
                 );
               },
             ),
+            GoRoute(
+              path: MedApptListPage.routePath,
+              name: MedApptListPage.routeName,
+              builder: (context, state) {
+                return ChangeNotifierProvider(
+                  create: (context) => MedApptListProvider(
+                    context.read<MedApptRepository>(),
+                  ),
+                  child: const MedApptListPage(),
+                );
+              },
+              routes: [
+                GoRoute(
+                  path: MedApptCreatePage.routePath,
+                  name: MedApptCreatePage.routeName,
+                  builder: (context, state) {
+                    return ChangeNotifierProvider(
+                      create: (context) => MedApptCreateProvider(
+                        context.read<MedApptRepository>(),
+                      ),
+                      child: const MedApptCreatePage(),
+                    );
+                  },
+                ),
+                GoRoute(
+                  path: ProjectSelectionPage.routePath,
+                  name: ProjectSelectionPage.routeName,
+                  builder: (context, state) {
+                    return ChangeNotifierProvider(
+                      create: (context) => ProjectSelectionProvider(
+                        context.read<ProjectRepository>(),
+                      )..loadInitial(),
+                      child: const ProjectSelectionPage(),
+                    );
+                  },
+                ),
+              ],
+            ),
+            GoRoute(
+              path: ChatPage.routePath,
+              name: ChatPage.routeName,
+              builder: (context, state) {
+                final convId = state.pathParameters['convId'];
+                final title = state.uri.queryParameters['title'];
+                
+                if (convId == null) {
+                  return Scaffold(
+                    appBar: AppBar(title: const Text('错误')),
+                    body: const Center(child: Text('无效的会话ID')),
+                  );
+                }
+
+                final currentUserId = context.read<UserProfileProvider>().profile?.id ?? 0;
+                
+                return ChangeNotifierProvider(
+                  create: (context) => ChatProvider(
+                    repository: context.read<ImRepository>(),
+                    websocketProvider: context.read<WebSocketProvider>(),
+                    convId: convId,
+                    currentUserId: currentUserId,
+                  ),
+                  child: ChatPage(convId: convId, title: title),
+                );
+              },
+            ),
           ],
         ),
       ],
@@ -542,6 +622,28 @@ class _YabaiAppState extends State<YabaiApp> {
         Provider(
           create: (context) => AddressBookRepository(context.read<ApiClient>()),
         ),
+        Provider(
+          create: (context) => MedApptRepository(context.read<ApiClient>()),
+        ),
+        Provider(
+          create: (context) => ImRepository(context.read<ApiClient>()),
+        ),
+        Provider(
+          create: (context) => WebSocketService(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => WebSocketProvider(context.read<WebSocketService>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => ConversationListProvider(
+            context.read<ImRepository>(),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => UnreadCountProvider(
+            context.read<ImRepository>(),
+          ),
+        ),
       ],
       child: _AppInitializer(
         router: _router,
@@ -554,6 +656,16 @@ class _YabaiAppState extends State<YabaiApp> {
               darkTheme: AppTheme.darkTheme,
               themeMode: themeProvider.themeMode,
               routerConfig: _router,
+              localizationsDelegates: const [
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: const [
+                Locale('zh', 'CN'),
+                Locale('en', 'US'),
+              ],
+              locale: const Locale('zh', 'CN'),
             );
           },
         ),

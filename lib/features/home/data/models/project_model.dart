@@ -4,6 +4,8 @@ class ProjectModel {
     required this.projName,
     this.shortTitle,
     this.sponsorName,
+    this.piName,
+    this.indication,
     required this.progressName,
     required this.signedCount,
     required this.totalSignCount,
@@ -16,6 +18,8 @@ class ProjectModel {
   final String projName;
   final String? shortTitle;
   final String? sponsorName;
+  final String? piName;
+  final String? indication;
   final String progressName;
   final int signedCount;
   final int totalSignCount;
@@ -29,6 +33,8 @@ class ProjectModel {
       projName: json['projName'] as String,
       shortTitle: json['shortTitle'] as String?,
       sponsorName: json['sponsorName'] as String?,
+      piName: json['piName'] as String?,
+      indication: json['indication'] as String?,
       progressName: json['progressName'] as String,
       signedCount: json['signedCount'] as int,
       totalSignCount: json['totalSignCount'] as int,
@@ -50,4 +56,3 @@ class ProjectModel {
   /// 签约进度文本（如：15/50）
   String get progressText => '$signedCount/$totalSignCount';
 }
-

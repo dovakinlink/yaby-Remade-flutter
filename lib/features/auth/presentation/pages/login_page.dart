@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
+import 'package:yabai_app/core/config/env_config.dart';
 import 'package:yabai_app/features/auth/data/models/auth_exception.dart';
 import 'package:yabai_app/features/auth/data/repositories/auth_repository.dart';
 import 'package:yabai_app/features/auth/providers/auth_session_provider.dart';
@@ -12,6 +13,7 @@ import 'package:yabai_app/core/widgets/primary_button.dart';
 import 'package:yabai_app/features/auth/providers/login_form_provider.dart';
 import 'package:yabai_app/features/auth/presentation/widgets/remember_me_row.dart';
 import 'package:yabai_app/features/home/presentation/pages/home_page.dart';
+import 'package:yabai_app/features/im/providers/websocket_provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -25,6 +27,28 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
+
+  /// 连接 WebSocket
+  Future<void> _connectWebSocket(BuildContext context, String accessToken) async {
+    try {
+      final websocketProvider = context.read<WebSocketProvider>();
+      final baseUrl = await EnvConfig.resolveApiBaseUrl();
+      
+      // 解析 baseUrl 获取主机和端口
+      final uri = Uri.parse(baseUrl);
+      final host = uri.host;
+      final port = uri.port;
+      
+      debugPrint('WebSocket: 开始连接 - host: $host, port: $port');
+      
+      // 连接 WebSocket（不等待，异步连接）
+      websocketProvider.connect(host, port, accessToken).catchError((e) {
+        debugPrint('WebSocket: 连接失败 - $e');
+      });
+    } catch (e) {
+      debugPrint('WebSocket: 初始化连接失败 - $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -187,6 +211,11 @@ class _LoginPageState extends State<LoginPage> {
                                                       
                                                       // 登录成功后立即获取用户信息
                                                       await userProfile.loadProfile();
+                                                      
+                                                      // 连接 WebSocket
+                                                      if (context.mounted) {
+                                                        _connectWebSocket(context, tokens.accessToken);
+                                                      }
                                                       
                                                       if (!context.mounted) {
                                                         return;

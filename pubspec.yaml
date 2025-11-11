@@ -30,15 +30,27 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   go_router: ^14.2.7
   provider: ^6.0.5
   dio: ^5.7.0
   flutter_svg: ^2.0.10+1
-  intl: ^0.19.0
+  intl: ^0.20.2
   device_info_plus: ^11.0.0
   shared_preferences: ^2.3.4
   flutter_widget_from_html: 0.14.11
   url_launcher: ^6.3.0
+  table_calendar: ^3.1.2
+  # IM 即时通讯相关依赖
+  web_socket_channel: ^3.0.1
+  path: ^1.9.0
+  path_provider: ^2.1.4
+  sqflite: ^2.4.1
+  image_picker: ^1.1.2
+  file_picker: ^8.1.4
+  cached_network_image: ^3.4.1
+  uuid: ^4.5.1
 
 dependency_overrides:
   flutter_widget_from_html_core:

@@ -15,6 +15,8 @@ import 'package:yabai_app/features/profile/presentation/widgets/change_password_
 import 'package:yabai_app/features/profile/presentation/widgets/my_favorites_tab.dart';
 import 'package:yabai_app/features/profile/providers/my_favorites_provider.dart';
 import 'package:yabai_app/features/profile/providers/my_posts_provider.dart';
+import 'package:yabai_app/features/im/data/local/im_database.dart';
+import 'package:yabai_app/features/im/providers/websocket_provider.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -511,9 +513,13 @@ class _ProfilePageState extends State<ProfilePage>
     final myPosts = context.read<MyPostsProvider>();
 
     try {
+      // 清除认证信息
       await authSession.clear();
       await userProfile.clear();
       myPosts.clear();
+
+      // 清除 IM 相关数据
+      await _clearImData();
 
       if (!mounted) return;
       context.go(LoginPage.routePath);
@@ -528,6 +534,23 @@ class _ProfilePageState extends State<ProfilePage>
           _isLoggingOut = false;
         });
       }
+    }
+  }
+
+  /// 清除 IM 相关数据
+  Future<void> _clearImData() async {
+    try {
+      // 断开 WebSocket 连接
+      final websocketProvider = context.read<WebSocketProvider>();
+      websocketProvider.disconnect();
+      
+      // 清空本地 IM 数据库
+      await ImDatabase.clearAllData();
+      
+      debugPrint('IM 数据已清除');
+    } catch (e) {
+      debugPrint('清除 IM 数据失败: $e');
+      // 即使失败也继续登出流程
     }
   }
 

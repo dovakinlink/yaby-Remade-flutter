@@ -61,7 +61,10 @@ class _LearningResourceListPageState extends State<LearningResourceListPage> {
           ? AppColors.darkScaffoldBackground
           : const Color(0xFFF8F9FA),
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         centerTitle: true,
         toolbarHeight: 64,
         title: const Text(

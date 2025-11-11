@@ -10,6 +10,8 @@ class ProjectDetailModel extends ProjectModel {
     required super.projName,
     super.shortTitle,
     super.sponsorName,
+    super.piName,
+    super.indication,
     required super.progressName,
     required super.signedCount,
     required super.totalSignCount,
@@ -35,6 +37,8 @@ class ProjectDetailModel extends ProjectModel {
       projName: json['projName'] as String,
       shortTitle: json['shortTitle'] as String?,
       sponsorName: json['sponsorName'] as String?,
+      piName: json['piName'] as String?,
+      indication: json['indication'] as String?,
       progressName: json['progressName'] as String,
       signedCount: json['signedCount'] as int,
       totalSignCount: json['totalSignCount'] as int,
@@ -100,4 +104,3 @@ class ProjectDetailModel extends ProjectModel {
   /// 是否有人员
   bool get hasStaff => staff.isNotEmpty;
 }
-
