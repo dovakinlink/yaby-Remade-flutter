@@ -219,12 +219,17 @@ class ConversationListItem extends StatelessWidget {
       debugPrint('  -> 显示 lastMessageContent: ${c.lastMessageContent}');
       return c.lastMessageContent!;
     }
-    // 2) 若有历史兼容字段 lastMessagePreview，回退显示
+    // 2) 如果 lastMessageType == 'PROJECT_CARD'，显示项目卡片标识
+    if (c.lastMessageType == 'PROJECT_CARD') {
+      debugPrint('  -> 显示 PROJECT_CARD 摘要');
+      return '[项目卡片]';
+    }
+    // 3) 若有历史兼容字段 lastMessagePreview，回退显示
     if (c.lastMessagePreview != null && c.lastMessagePreview!.trim().isNotEmpty) {
       debugPrint('  -> 显示 lastMessagePreview: ${c.lastMessagePreview}');
       return c.lastMessagePreview!;
     }
-    // 3) 无内容则显示占位
+    // 4) 无内容则显示占位
     debugPrint('  -> 显示默认占位');
     return '暂无内容';
   }

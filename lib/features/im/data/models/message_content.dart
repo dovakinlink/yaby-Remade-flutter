@@ -16,6 +16,8 @@ abstract class MessageContent {
         return VideoContent.fromJson(json);
       case 'CARD':
         return CardContent.fromJson(json);
+      case 'PROJECT_CARD':
+        return ProjectCardContent.fromJson(json);
       case 'SYSTEM':
         return SystemContent.fromJson(json);
       default:
@@ -234,6 +236,133 @@ class SystemContent implements MessageContent {
       'action': action,
       'userId': userId,
       'userName': userName,
+    };
+  }
+}
+
+/// 项目卡片消息内容
+class ProjectCardContent implements MessageContent {
+  final String cardType; // "project"
+  final ProjectCardData project;
+  final String snapshotAt;
+  final List<CardAction> actions;
+
+  ProjectCardContent({
+    required this.cardType,
+    required this.project,
+    required this.snapshotAt,
+    required this.actions,
+  });
+
+  factory ProjectCardContent.fromJson(Map<String, dynamic> json) {
+    return ProjectCardContent(
+      cardType: json['cardType'] as String? ?? 'project',
+      project: ProjectCardData.fromJson(json['project'] as Map<String, dynamic>),
+      snapshotAt: json['snapshotAt'] as String? ?? DateTime.now().toIso8601String(),
+      actions: (json['actions'] as List<dynamic>?)
+              ?.map((e) => CardAction.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'cardType': cardType,
+      'project': project.toJson(),
+      'snapshotAt': snapshotAt,
+      'actions': actions.map((a) => a.toJson()).toList(),
+    };
+  }
+}
+
+/// 项目卡片数据
+class ProjectCardData {
+  final int id;
+  final int? orgId;
+  final String title;
+  final String? phase;
+  final String? tumorType;
+  final String? lineOfTherapy;
+  final int? siteCount;
+  final String? status;
+  final int? coverFileId;
+
+  ProjectCardData({
+    required this.id,
+    this.orgId,
+    required this.title,
+    this.phase,
+    this.tumorType,
+    this.lineOfTherapy,
+    this.siteCount,
+    this.status,
+    this.coverFileId,
+  });
+
+  factory ProjectCardData.fromJson(Map<String, dynamic> json) {
+    return ProjectCardData(
+      id: json['id'] as int,
+      orgId: json['orgId'] as int?,
+      title: json['title'] as String? ?? '',
+      phase: json['phase'] as String?,
+      tumorType: json['tumorType'] as String?,
+      lineOfTherapy: json['lineOfTherapy'] as String?,
+      siteCount: json['siteCount'] as int?,
+      status: json['status'] as String?,
+      coverFileId: json['coverFileId'] as int?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'orgId': orgId,
+      'title': title,
+      'phase': phase,
+      'tumorType': tumorType,
+      'lineOfTherapy': lineOfTherapy,
+      'siteCount': siteCount,
+      'status': status,
+      'coverFileId': coverFileId,
+    };
+  }
+}
+
+/// 卡片操作
+class CardAction {
+  final String type; // "deeplink", "web", "event"
+  final String label;
+  final String? url;
+  final String? name;
+  final Map<String, dynamic>? params;
+
+  CardAction({
+    required this.type,
+    required this.label,
+    this.url,
+    this.name,
+    this.params,
+  });
+
+  factory CardAction.fromJson(Map<String, dynamic> json) {
+    return CardAction(
+      type: json['type'] as String? ?? '',
+      label: json['label'] as String? ?? '',
+      url: json['url'] as String?,
+      name: json['name'] as String?,
+      params: json['params'] as Map<String, dynamic>?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'label': label,
+      if (url != null) 'url': url,
+      if (name != null) 'name': name,
+      if (params != null) 'params': params,
     };
   }
 }

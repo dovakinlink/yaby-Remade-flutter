@@ -12,6 +12,7 @@ class ProjectDetailModel extends ProjectModel {
     super.sponsorName,
     super.piName,
     super.indication,
+    super.projectNo,
     required super.progressName,
     required super.signedCount,
     required super.totalSignCount,
@@ -39,6 +40,7 @@ class ProjectDetailModel extends ProjectModel {
       sponsorName: json['sponsorName'] as String?,
       piName: json['piName'] as String?,
       indication: json['indication'] as String?,
+      projectNo: ProjectModel.parseProjectNo(json),
       progressName: json['progressName'] as String,
       signedCount: json['signedCount'] as int,
       totalSignCount: json['totalSignCount'] as int,
@@ -81,6 +83,17 @@ class ProjectDetailModel extends ProjectModel {
   ProjectStaffModel? get primaryStaff {
     try {
       return staff.firstWhere((s) => s.isPrimary);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 获取 PI 人员（roleName = PI）
+  ProjectStaffModel? get piStaff {
+    try {
+      return staff.firstWhere(
+        (s) => s.roleName.toUpperCase() == 'PI',
+      );
     } catch (_) {
       return null;
     }

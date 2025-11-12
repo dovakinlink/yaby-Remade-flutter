@@ -6,7 +6,9 @@ import 'package:yabai_app/features/ai/presentation/widgets/ai_input_section.dart
 import 'package:yabai_app/features/ai/presentation/widgets/ai_project_card.dart';
 
 class AiPage extends StatelessWidget {
-  const AiPage({super.key});
+  const AiPage({super.key, this.onBack});
+
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -14,25 +16,7 @@ class AiPage extends StatelessWidget {
     
     return Column(
       children: [
-        // 标题栏
-        Container(
-          color: isDark ? AppColors.darkCardBackground : Colors.white,
-          child: SafeArea(
-            bottom: false,
-            child: Container(
-              height: 64,
-              alignment: Alignment.center,
-              child: Text(
-                'AI 项目匹配',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? AppColors.darkNeutralText : Colors.black87,
-                ),
-              ),
-            ),
-          ),
-        ),
+        _buildHeader(isDark),
         // 内容区域
         Expanded(
           child: Consumer<AiQueryProvider>(
@@ -227,5 +211,46 @@ class AiPage extends StatelessWidget {
       ],
     );
   }
-}
 
+  Widget _buildHeader(bool isDark) {
+    return Container(
+      color: isDark ? AppColors.darkCardBackground : Colors.white,
+      child: SafeArea(
+        bottom: false,
+        child: Container(
+          height: 64,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              if (onBack != null)
+                IconButton(
+                  onPressed: onBack,
+                  icon: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 20,
+                    color: isDark
+                        ? AppColors.darkNeutralText
+                        : Colors.black87,
+                  ),
+                )
+              else
+                const SizedBox(width: 48),
+              Expanded(
+                child: Text(
+                  'AI 项目匹配',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppColors.darkNeutralText : Colors.black87,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 48),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

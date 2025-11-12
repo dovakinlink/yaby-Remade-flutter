@@ -1,0 +1,20 @@
+{
+    "cardType": "project",
+    "project": {
+      "id": 15,
+      "orgId": 3,
+      "title": "食管癌一线治疗项目",
+      "phase": "III",
+      "tumorType": "食管癌",
+      "lineOfTherapy": "一线",
+      "siteCount": 12,
+      "status": "recruiting",
+      "coverFileId": 9281
+    },
+    "snapshotAt": "2025-11-12T03:20:00Z",
+    "actions": [
+      {"type":"deeplink","label":"查看详情","url":"yaby://project/15"},
+      {"type":"web","label":"在Web打开","url":"https://app.yaby.cn/projects/15"},
+      {"type":"event","label":"发起初筛","name":"start_prescreen", "params":{"projectId":15}}
+    ]
+  }

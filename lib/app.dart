@@ -32,6 +32,7 @@ import 'package:yabai_app/features/home/providers/home_announcements_provider.da
 import 'package:yabai_app/features/home/providers/project_detail_provider.dart';
 import 'package:yabai_app/features/home/providers/project_list_provider.dart';
 import 'package:yabai_app/features/home/providers/project_statistics_provider.dart';
+import 'package:yabai_app/features/home/providers/share_link_provider.dart';
 import 'package:yabai_app/features/screening/data/repositories/screening_repository.dart';
 import 'package:yabai_app/features/screening/presentation/pages/screening_detail_page.dart';
 import 'package:yabai_app/features/screening/presentation/pages/screening_submit_page.dart';
@@ -77,6 +78,7 @@ import 'package:yabai_app/features/im/providers/conversation_list_provider.dart'
 import 'package:yabai_app/features/im/providers/chat_provider.dart';
 import 'package:yabai_app/features/im/providers/unread_count_provider.dart';
 import 'package:yabai_app/features/im/presentation/pages/chat_page.dart';
+import 'package:yabai_app/features/im/presentation/pages/conversation_selector_page.dart';
 
 class YabaiApp extends StatefulWidget {
   const YabaiApp({super.key});
@@ -218,6 +220,11 @@ class _YabaiAppState extends State<YabaiApp> {
                         ChangeNotifierProvider(
                           create: (context) => FavoriteProvider(
                             context.read<FavoriteRepository>(),
+                          ),
+                        ),
+                        ChangeNotifierProvider(
+                          create: (context) => ShareLinkProvider(
+                            context.read<ProjectRepository>(),
                           ),
                         ),
                       ],
@@ -506,6 +513,25 @@ class _YabaiAppState extends State<YabaiApp> {
                 );
               },
             ),
+            GoRoute(
+              path: ConversationSelectorPage.routePath,
+              name: ConversationSelectorPage.routeName,
+              builder: (context, state) {
+                final extra = state.extra as Map<String, dynamic>?;
+                
+                if (extra == null) {
+                  return Scaffold(
+                    appBar: AppBar(title: const Text('错误')),
+                    body: const Center(child: Text('缺少分享数据')),
+                  );
+                }
+                
+                return ConversationSelectorPage(
+                  shareData: extra['shareData'] as Map<String, dynamic>,
+                  shareType: extra['shareType'] as String,
+                );
+              },
+            ),
           ],
         ),
       ],
@@ -651,7 +677,7 @@ class _YabaiAppState extends State<YabaiApp> {
           builder: (context, themeProvider, child) {
             return MaterialApp.router(
               debugShowCheckedModeBanner: false,
-              title: '崖柏',
+              title: '智研云',
               theme: AppTheme.lightTheme,
               darkTheme: AppTheme.darkTheme,
               themeMode: themeProvider.themeMode,

@@ -6,6 +6,7 @@ import 'package:yabai_app/core/network/models/page_response.dart';
 import 'package:yabai_app/features/home/data/models/attr_definition_model.dart';
 import 'package:yabai_app/features/home/data/models/project_detail_model.dart';
 import 'package:yabai_app/features/home/data/models/project_model.dart';
+import 'package:yabai_app/features/home/data/models/share_link_model.dart';
 
 class ProjectRepository {
   const ProjectRepository(this._apiClient);
@@ -270,6 +271,58 @@ class ProjectRepository {
       rethrow;
     } catch (error) {
       throw ApiException(message: '搜索项目失败: $error');
+    }
+  }
+
+  /// 生成项目分享链接
+  Future<ShareLinkModel> generateShareLink(int projectId) async {
+    try {
+      final response = await _apiClient.post('/api/v1/projects/$projectId/share');
+
+      final body = response.data;
+
+      if (body == null) {
+        throw ApiException(message: '服务器未返回数据');
+      }
+
+      final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
+        body,
+        dataParser: (rawData) {
+          if (rawData is Map<String, dynamic>) {
+            return rawData;
+          }
+          return <String, dynamic>{};
+        },
+      );
+
+      if (!apiResponse.success) {
+        throw ApiException(
+          message: apiResponse.message,
+          code: apiResponse.code,
+        );
+      }
+
+      final data = apiResponse.data;
+      if (data == null || data.isEmpty) {
+        throw ApiException(message: '生成分享链接失败');
+      }
+
+      return ShareLinkModel.fromJson(data);
+    } on DioException catch (error) {
+      final dynamic responseBody = error.response?.data;
+      String? code;
+      String message = '网络请求失败';
+      if (responseBody is Map<String, dynamic>) {
+        code = responseBody['code'] as String?;
+        message = responseBody['message'] as String? ?? message;
+      } else if (error.message != null) {
+        message = error.message!;
+      }
+      throw ApiException(message: message, code: code);
+    } on ApiException {
+      rethrow;
+    } catch (error) {
+      throw ApiException(message: '生成分享链接失败: $error');
     }
   }
 }

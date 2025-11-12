@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/home/data/models/project_detail_model.dart';
+import 'package:yabai_app/features/home/data/models/project_staff_model.dart';
 import 'package:yabai_app/features/home/presentation/widgets/project_detail/project_detail_section_container.dart';
 
 class ProjectBasicInfoSection extends StatelessWidget {
@@ -8,10 +11,12 @@ class ProjectBasicInfoSection extends StatelessWidget {
     super.key,
     required this.project,
     this.showTopDivider = false,
+    this.piStaff,
   });
 
   final ProjectDetailModel project;
   final bool showTopDivider;
+  final ProjectStaffModel? piStaff;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +49,12 @@ class ProjectBasicInfoSection extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 16),
+          _buildProjectNumber(context, isDark),
+          if (_hasPiInfo) ...[
+            const SizedBox(height: 16),
+            _buildPiInfo(context, isDark),
+          ],
+          const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 16),
           // 申办方
@@ -55,15 +66,6 @@ class ProjectBasicInfoSection extends StatelessWidget {
               value: project.sponsorName!,
               isDark: isDark,
             ),
-          // 进度状态
-          _buildInfoRow(
-            context,
-            icon: Icons.track_changes_outlined,
-            label: '项目进度',
-            value: project.progressName,
-            isDark: isDark,
-            valueWidget: _buildProgressBadge(project.progressName),
-          ),
           // 签约进度
           const SizedBox(height: 16),
           _buildSignProgress(context, isDark),
@@ -84,6 +86,167 @@ class ProjectBasicInfoSection extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  bool get _hasPiInfo {
+    if (piStaff != null) return true;
+    return project.piName != null && project.piName!.isNotEmpty;
+  }
+
+  Widget _buildProjectNumber(BuildContext context, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '项目编号',
+          style: TextStyle(
+            fontSize: 13,
+            color: isDark ? AppColors.darkSecondaryText : Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Text(
+                project.displayProjectNo,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? AppColors.darkNeutralText : null,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 12),
+            _buildProgressBadge(project.progressName),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPiInfo(BuildContext context, bool isDark) {
+    final ProjectStaffModel? staff = piStaff;
+    final String? piName = staff?.personName ?? project.piName;
+    if (piName == null || piName.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final roleLabel = staff?.roleName ?? 'PI';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '项目PI',
+          style: TextStyle(
+            fontSize: 13,
+            color: isDark ? AppColors.darkSecondaryText : Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _buildPiAvatar(context, staff, piName),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    piName,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.darkNeutralText : null,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandGreen.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AppColors.brandGreen.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Text(
+                      roleLabel,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.brandGreen,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPiAvatar(
+    BuildContext context,
+    ProjectStaffModel? staff,
+    String fallbackName,
+  ) {
+    const double size = 48;
+
+    if (staff != null && staff.hasAvatar) {
+      final apiClient = context.read<ApiClient>();
+      final resolved = apiClient.resolveUrlSync(staff.avatar!);
+      return ClipOval(
+        child: Image.network(
+          resolved,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          headers: apiClient.getAuthHeaders(),
+          errorBuilder: (context, error, stackTrace) {
+            return _buildInitialAvatar(staff.initial, size: size);
+          },
+        ),
+      );
+    }
+
+    if (staff != null) {
+      return _buildInitialAvatar(staff.initial, size: size);
+    }
+    return _buildInitialAvatar(_initialFromName(fallbackName), size: size);
+  }
+
+  Widget _buildInitialAvatar(String initial, {double size = 48}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.brandGreen.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: TextStyle(
+            color: AppColors.brandGreen,
+            fontSize: size * 0.4,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _initialFromName(String name) {
+    if (name.trim().isEmpty) return '?';
+    return name.trim().characters.first.toUpperCase();
   }
 
   Widget _buildInfoRow(

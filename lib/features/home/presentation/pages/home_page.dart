@@ -18,9 +18,7 @@ import 'package:yabai_app/features/messages/presentation/pages/message_list_page
 import 'package:yabai_app/features/screening/data/repositories/screening_repository.dart';
 import 'package:yabai_app/features/screening/providers/screening_list_provider.dart';
 import 'package:yabai_app/features/screening/presentation/pages/screening_list_page.dart';
-import 'package:yabai_app/features/ai/data/repositories/ai_repository.dart';
-import 'package:yabai_app/features/ai/providers/ai_query_provider.dart';
-import 'package:yabai_app/features/ai/presentation/pages/ai_page.dart';
+import 'package:yabai_app/features/ai/presentation/pages/ai_entry_page.dart';
 import 'package:yabai_app/features/im/presentation/pages/conversation_list_page.dart';
 import 'package:yabai_app/features/im/providers/websocket_provider.dart';
 import 'package:yabai_app/features/im/providers/unread_count_provider.dart';
@@ -280,10 +278,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildAiTab() {
-    return ChangeNotifierProvider(
-      create: (context) => AiQueryProvider(context.read<AiRepository>()),
-      child: const AiPage(),
-    );
+    return const AiEntryPage();
   }
 
   Widget _buildScreeningTab() {
@@ -592,4 +587,3 @@ class _ErrorState extends StatelessWidget {
     );
   }
 }
-

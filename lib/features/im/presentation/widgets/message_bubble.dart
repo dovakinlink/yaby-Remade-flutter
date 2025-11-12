@@ -5,6 +5,7 @@ import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/features/im/data/models/im_message_model.dart';
 import 'package:yabai_app/features/im/data/models/message_content.dart';
+import 'package:yabai_app/features/im/presentation/widgets/project_card_message.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 /// 消息气泡组件
@@ -170,6 +171,8 @@ class MessageBubble extends StatelessWidget {
         return _buildImageContent();
       case 'FILE':
         return _buildFileContent(isDark);
+      case 'PROJECT_CARD':
+        return ProjectCardMessage(content: message.body as ProjectCardContent);
       default:
         return Text(
           '[不支持的消息类型]',

@@ -18,6 +18,7 @@ class ScreeningListPage extends StatefulWidget {
 
 class _ScreeningListPageState extends State<ScreeningListPage> {
   late final ScrollController _scrollController;
+  static const double _swipeVelocityThreshold = 250;
 
   @override
   void initState() {
@@ -51,14 +52,19 @@ class _ScreeningListPageState extends State<ScreeningListPage> {
     final provider = context.watch<ScreeningListProvider>();
 
     return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: () => provider.refresh(),
-        backgroundColor: isDark ? AppColors.darkCardBackground : Colors.white,
-        color: AppColors.brandGreen,
-        child: CustomScrollView(
-          controller: _scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragEnd: (details) {
+          _handleHorizontalSwipe(details.primaryVelocity ?? 0, provider);
+        },
+        child: RefreshIndicator(
+          onRefresh: () => provider.refresh(),
+          backgroundColor: isDark ? AppColors.darkCardBackground : Colors.white,
+          color: AppColors.brandGreen,
+          child: CustomScrollView(
+            controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
             // 标题
             SliverToBoxAdapter(
               child: Padding(
@@ -263,29 +269,18 @@ class _ScreeningListPageState extends State<ScreeningListPage> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   /// 获取状态标签
   String _getStatusLabel(String? statusCode) {
-    switch (statusCode) {
-      case 'PENDING':
-        return '待审核';
-      case 'CRC_REVIEW':
-        return '审核中';
-      case 'MATCH_FAILED':
-        return '筛查失败';
-      case 'ICF_SIGNED':
-        return '已知情';
-      case 'ICF_FAILED':
-        return '知情失败';
-      case 'ENROLLED':
-        return '已入组';
-      case 'EXITED':
-        return '已出组';
-      default:
-        return '全部';
-    }
+    final options = ScreeningStatusFilter.options;
+    final option = options.firstWhere(
+      (item) => item.code == statusCode,
+      orElse: () => options.first,
+    );
+    return option.label;
   }
 
   /// 获取空状态提示
@@ -294,6 +289,35 @@ class _ScreeningListPageState extends State<ScreeningListPage> {
       return '暂无筛查记录';
     }
     return '暂无${_getStatusLabel(statusCode)}的筛查记录';
+  }
+
+  void _handleHorizontalSwipe(
+    double primaryVelocity,
+    ScreeningListProvider provider,
+  ) {
+    if (primaryVelocity.abs() < _swipeVelocityThreshold) {
+      return;
+    }
+
+    final options = ScreeningStatusFilter.options;
+    final currentIndex = options.indexWhere(
+      (item) => item.code == provider.currentStatusFilter,
+    );
+    final safeIndex = currentIndex == -1 ? 0 : currentIndex;
+
+    int targetIndex = safeIndex;
+    if (primaryVelocity < 0 && safeIndex < options.length - 1) {
+      targetIndex = safeIndex + 1;
+    } else if (primaryVelocity > 0 && safeIndex > 0) {
+      targetIndex = safeIndex - 1;
+    }
+
+    if (targetIndex == safeIndex) {
+      return;
+    }
+
+    final targetCode = options[targetIndex].code;
+    provider.setStatusFilter(targetCode);
   }
 }
 
@@ -483,4 +507,3 @@ class _ScreeningCard extends StatelessWidget {
     );
   }
 }
-

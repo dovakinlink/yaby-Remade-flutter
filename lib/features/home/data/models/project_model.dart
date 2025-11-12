@@ -6,6 +6,7 @@ class ProjectModel {
     this.sponsorName,
     this.piName,
     this.indication,
+    this.projectNo,
     required this.progressName,
     required this.signedCount,
     required this.totalSignCount,
@@ -20,6 +21,7 @@ class ProjectModel {
   final String? sponsorName;
   final String? piName;
   final String? indication;
+  final String? projectNo;
   final String progressName;
   final int signedCount;
   final int totalSignCount;
@@ -35,6 +37,7 @@ class ProjectModel {
       sponsorName: json['sponsorName'] as String?,
       piName: json['piName'] as String?,
       indication: json['indication'] as String?,
+      projectNo: parseProjectNo(json),
       progressName: json['progressName'] as String,
       signedCount: json['signedCount'] as int,
       totalSignCount: json['totalSignCount'] as int,
@@ -55,4 +58,24 @@ class ProjectModel {
 
   /// 签约进度文本（如：15/50）
   String get progressText => '$signedCount/$totalSignCount';
+
+  /// 展示用的项目编号（后端缺失时退回到 ID）
+  String get displayProjectNo {
+    if (projectNo != null && projectNo!.isNotEmpty) {
+      return projectNo!;
+    }
+    return '#$id';
+  }
+
+  static String? parseProjectNo(Map<String, dynamic> json) {
+    final dynamic raw = json['projectNo'] ??
+        json['projNo'] ??
+        json['projCode'] ??
+        json['projectCode'];
+    if (raw == null) return null;
+    if (raw is String) {
+      return raw;
+    }
+    return raw.toString();
+  }
 }

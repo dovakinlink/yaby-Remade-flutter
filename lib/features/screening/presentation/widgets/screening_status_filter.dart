@@ -12,15 +12,15 @@ class ScreeningStatusFilter extends StatelessWidget {
   final String? currentFilter;
   final ValueChanged<String?> onFilterChanged;
 
-  static const _filters = <_FilterOption>[
-    _FilterOption(null, '全部'),
-    _FilterOption('PENDING', '待审核'),
-    _FilterOption('CRC_REVIEW', '审核中'),
-    _FilterOption('MATCH_FAILED', '筛查失败'),
-    _FilterOption('ICF_SIGNED', '已知情'),
-    _FilterOption('ICF_FAILED', '知情失败'),
-    _FilterOption('ENROLLED', '已入组'),
-    _FilterOption('EXITED', '已出组'),
+  static const options = <ScreeningFilterOption>[
+    ScreeningFilterOption(null, '全部'),
+    ScreeningFilterOption('PENDING', '待审核'),
+    ScreeningFilterOption('CRC_REVIEW', '审核中'),
+    ScreeningFilterOption('MATCH_FAILED', '筛查失败'),
+    ScreeningFilterOption('ICF_SIGNED', '已知情'),
+    ScreeningFilterOption('ICF_FAILED', '知情失败'),
+    ScreeningFilterOption('ENROLLED', '已入组'),
+    ScreeningFilterOption('EXITED', '已出组'),
   ];
 
   @override
@@ -32,10 +32,10 @@ class ScreeningStatusFilter extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _filters.length,
+        itemCount: options.length,
         separatorBuilder: (context, index) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          final filter = _filters[index];
+          final filter = options[index];
           final isSelected = currentFilter == filter.code;
 
           return _FilterChipButton(
@@ -51,8 +51,8 @@ class ScreeningStatusFilter extends StatelessWidget {
 }
 
 /// 筛选选项数据类
-class _FilterOption {
-  const _FilterOption(this.code, this.label);
+class ScreeningFilterOption {
+  const ScreeningFilterOption(this.code, this.label);
 
   final String? code;
   final String label;
@@ -119,4 +119,3 @@ class _FilterChipButton extends StatelessWidget {
     );
   }
 }
-

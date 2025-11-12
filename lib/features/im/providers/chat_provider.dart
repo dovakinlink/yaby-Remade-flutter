@@ -314,6 +314,56 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
+  /// 发送项目卡片消息
+  Future<void> sendProjectCardMessage(Map<String, dynamic> cardData) async {
+    final clientMsgId = _uuid.v4();
+
+    final localMessage = ImMessage(
+      id: 0,
+      convId: convId,
+      seq: 0,
+      senderUserId: currentUserId,
+      msgType: 'PROJECT_CARD',
+      body: ProjectCardContent.fromJson(cardData),
+      isRevoked: false,
+      createdAt: DateTime.now(),
+      clientMsgId: clientMsgId,
+      localStatus: MessageStatus.sending,
+    );
+
+    _messages.add(localMessage);
+    notifyListeners();
+    await ImDatabase.saveMessage(localMessage);
+
+    try {
+      final wsMessage = WsMessage.createSendMessage(
+        msgId: clientMsgId,
+        convId: convId,
+        msgType: 'PROJECT_CARD',
+        content: cardData,
+      );
+
+      final ack = await _websocketProvider.sendMessageAndWaitAck(wsMessage);
+
+      if (ack.success) {
+        await ImDatabase.updateMessageStatus(
+          clientMsgId,
+          MessageStatus.sent,
+          messageId: ack.messageId,
+          seq: ack.seq,
+        );
+        await _reloadMessages();
+      } else {
+        await ImDatabase.updateMessageStatus(clientMsgId, MessageStatus.failed);
+        await _reloadMessages();
+      }
+    } catch (e) {
+      debugPrint('发送项目卡片消息失败: $e');
+      await ImDatabase.updateMessageStatus(clientMsgId, MessageStatus.failed);
+      await _reloadMessages();
+    }
+  }
+
   /// 重新加载消息列表
   Future<void> _reloadMessages() async {
     _messages = await ImDatabase.getMessages(convId, limit: _messages.length);
