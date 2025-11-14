@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
+import 'package:yabai_app/features/im/data/models/conversation_model.dart';
 import 'package:yabai_app/features/im/providers/conversation_list_provider.dart';
 import 'package:yabai_app/features/im/presentation/widgets/conversation_list_item.dart';
 import 'package:yabai_app/features/im/presentation/pages/chat_page.dart';
@@ -123,6 +124,10 @@ class _ConversationListPageState extends State<ConversationListPage> {
               queryParameters: {'title': conversation.title ?? '聊天'},
             );
           },
+          onLongPress: () {
+            // 长按显示删除确认对话框
+            _showDeleteConfirmDialog(context, provider, conversation);
+          },
         );
       },
     );
@@ -197,6 +202,100 @@ class _ConversationListPageState extends State<ConversationListPage> {
         );
       },
     );
+  }
+
+  /// 显示删除确认对话框
+  void _showDeleteConfirmDialog(
+    BuildContext context,
+    ConversationListProvider provider,
+    Conversation conversation,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final conversationTitle = conversation.title ?? '未命名会话';
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: isDark ? AppColors.darkCardBackground : Colors.white,
+        title: Text(
+          '删除会话',
+          style: TextStyle(
+            color: isDark ? AppColors.darkNeutralText : Colors.grey[800],
+          ),
+        ),
+        content: Text(
+          '确定要删除与"$conversationTitle"的会话吗？\n\n删除后，你和对方的聊天记录均将被清除，且无法恢复。',
+          style: TextStyle(
+            color: isDark ? AppColors.darkSecondaryText : Colors.grey[700],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              '取消',
+              style: TextStyle(
+                color: isDark ? AppColors.darkSecondaryText : Colors.grey[600],
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _handleDeleteConversation(context, provider, conversation);
+            },
+            child: const Text(
+              '删除',
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 处理删除会话
+  Future<void> _handleDeleteConversation(
+    BuildContext context,
+    ConversationListProvider provider,
+    Conversation conversation,
+  ) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
+    // 显示加载提示
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(
+        content: Text('正在删除...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    try {
+      await provider.deleteConversation(conversation.convId);
+      
+      if (context.mounted) {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('删除成功'),
+            backgroundColor: AppColors.brandGreen,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('删除失败: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 }
 

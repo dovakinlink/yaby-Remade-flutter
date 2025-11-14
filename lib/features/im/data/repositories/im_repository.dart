@@ -121,6 +121,21 @@ class ImRepository {
     }
   }
 
+  /// 删除会话
+  /// 删除当前用户与会话的关联关系，用户将不再看到该会话
+  Future<void> deleteConversation(String convId) async {
+    try {
+      final response = await _apiClient.delete('/api/v1/im/conversations/$convId');
+
+      final data = response.data;
+      if (data == null || data['success'] != true) {
+        throw Exception(data?['message'] ?? '删除会话失败');
+      }
+    } catch (e) {
+      throw Exception('删除会话失败: $e');
+    }
+  }
+
   // ==================== 消息管理 API ====================
 
   /// 发送消息（备用 REST API，主要使用 WebSocket）

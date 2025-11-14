@@ -9,11 +9,13 @@ import 'package:yabai_app/features/im/data/models/conversation_model.dart';
 class ConversationListItem extends StatelessWidget {
   final Conversation conversation;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   const ConversationListItem({
     super.key,
     required this.conversation,
     required this.onTap,
+    this.onLongPress,
   });
 
   @override
@@ -22,6 +24,7 @@ class ConversationListItem extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(

@@ -201,11 +201,24 @@ class ConversationListProvider extends ChangeNotifier {
   }
 
   /// 删除会话
+  /// 先调用API删除服务器端的关联关系，成功后再删除本地数据库
   Future<void> deleteConversation(String convId) async {
     try {
+      debugPrint('开始删除会话: convId=$convId');
+      
+      // 1. 先调用API删除服务器端的关联关系
+      await _repository.deleteConversation(convId);
+      debugPrint('服务器端删除成功');
+      
+      // 2. 删除本地数据库
       await ImDatabase.deleteConversation(convId);
+      debugPrint('本地数据库删除成功');
+      
+      // 3. 从内存列表中移除
       _conversations.removeWhere((c) => c.convId == convId);
       notifyListeners();
+      
+      debugPrint('会话删除完成');
     } catch (e) {
       debugPrint('删除会话失败: $e');
       rethrow;

@@ -11,6 +11,7 @@
 - **在线投递**：通过 WebSocket 实时推送
 - **离线同步**：客户端根据 seq 拉取未读消息
 - **数据隔离**：所有表带 `org_id`，实现 SaaS 多租户隔离
+- **文件上传**：支持图片、文件、视频等，单文件最大 20MB，单次请求最大 50MB
 
 ---
 
@@ -463,7 +464,143 @@ Content-Type: application/json
 
 ---
 
-### 1.5 创建群聊会话
+### 1.5 删除会话
+
+**接口**：`DELETE /conversations/{convId}`
+
+**描述**：删除当前用户与会话的关联关系，用户将不再看到该会话
+
+**功能说明**：
+- 从 `im_conversation_member` 表中删除用户与会话的关联关系
+- 删除后，用户将无法再看到该会话，但会话本身和其他成员仍然存在
+- 单聊会话：删除后，对方用户仍然可以看到会话
+- 群聊会话：删除后，其他群成员仍然可以看到会话
+- 系统会话：通常不建议删除，但接口不做限制
+
+**路径参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|-----|------|-----|------|
+| convId | String | 是 | 会话ID |
+
+**请求示例**：
+```http
+DELETE /api/v1/im/conversations/abc123def456...
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**响应示例**：
+
+成功响应（200 OK）：
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "data": null
+}
+```
+
+**错误响应**：
+
+会话不存在或无权访问（200）：
+```json
+{
+  "success": false,
+  "code": "CONV_NOT_FOUND",
+  "message": "会话不存在或无权访问",
+  "data": null
+}
+```
+
+用户不在会话中（200）：
+```json
+{
+  "success": false,
+  "code": "MEMBER_NOT_FOUND",
+  "message": "您不在该会话中",
+  "data": null
+}
+```
+
+删除失败（200）：
+```json
+{
+  "success": false,
+  "code": "DELETE_FAILED",
+  "message": "删除会话失败",
+  "data": null
+}
+```
+
+**Flutter 调用示例**：
+```dart
+Future<bool> deleteConversation(String convId) async {
+  try {
+    final response = await http.delete(
+      Uri.parse('http://localhost:8090/api/v1/im/conversations/$convId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken'
+      },
+    );
+    
+    final result = jsonDecode(response.body);
+    if (result['success']) {
+      print('会话删除成功');
+      return true;
+    } else {
+      print('删除失败: ${result['message']}');
+      return false;
+    }
+  } catch (e) {
+    print('请求失败: $e');
+    return false;
+  }
+}
+```
+
+**JavaScript 调用示例**：
+```javascript
+async function deleteConversation(convId) {
+  try {
+    const response = await fetch(
+      `http://localhost:8090/api/v1/im/conversations/${convId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    );
+    
+    const result = await response.json();
+    if (result.success) {
+      console.log('会话删除成功');
+      return true;
+    } else {
+      console.error('删除失败:', result.message);
+      return false;
+    }
+  } catch (error) {
+    console.error('请求失败:', error);
+    return false;
+  }
+}
+```
+
+**业务说明**：
+1. **删除机制**：删除的是用户与会话的关联关系，而非会话本身
+2. **单聊会话**：删除后，对方用户仍然可以看到会话，可以继续发送消息
+3. **群聊会话**：删除后，其他群成员仍然可以看到会话，可以继续发送消息
+4. **系统会话**：通常不建议删除，但接口不做限制
+5. **权限验证**：只能删除自己参与的会话，且只能删除本组织的会话
+6. **删除后效果**：删除后，该会话将从用户的会话列表中消失，无法再查看该会话的消息
+
+---
+
+### 1.6 创建群聊会话
 
 **接口**：`POST /conversations/group`
 
@@ -1141,9 +1278,228 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ---
 
-## 四、设备管理 API
+## 四、文件上传 API
 
-### 4.1 注册设备
+### 4.1 上传文件
+
+**接口**：`POST /api/v1/files/upload`
+
+**描述**：上传文件（图片、文档、视频等），用于IM消息发送前的文件上传
+
+**请求方式**：`multipart/form-data`
+
+**请求参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|-----|------|-----|------|
+| file | File | 是 | 上传的文件 |
+
+**请求头**：
+```
+Authorization: Bearer <access_token>
+Content-Type: multipart/form-data
+```
+
+**请求示例**（curl）：
+```bash
+curl -X POST "http://localhost:8090/api/v1/files/upload" \
+  -H "Authorization: Bearer your_access_token" \
+  -F "file=@/path/to/image.jpg"
+```
+
+**响应示例**：
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "data": {
+    "fileId": 123,
+    "url": "uploads/2025/11/11/a1b2c3d4_unique_uuid.jpg",
+    "filename": "image.jpg",
+    "ext": ".jpg",
+    "mimeType": "image/jpeg",
+    "sizeBytes": 1024000,
+    "width": 1920,
+    "height": 1080
+  }
+}
+```
+
+**响应字段说明**：
+
+| 字段 | 类型 | 说明 |
+|-----|------|------|
+| fileId | Long | 文件ID，用于发送消息时关联 |
+| url | String | 文件访问URL（相对路径） |
+| filename | String | 原始文件名 |
+| ext | String | 文件扩展名 |
+| mimeType | String | 文件MIME类型 |
+| sizeBytes | Long | 文件大小（字节） |
+| width | Integer | 图片宽度（仅图片类型，其他类型为null） |
+| height | Integer | 图片高度（仅图片类型，其他类型为null） |
+
+**特性说明**：
+
+1. **文件去重**：
+   - 系统会计算文件的SHA256哈希值
+   - 相同内容的文件只会存储一份
+   - 重复上传相同文件会直接返回已存在的文件信息
+
+2. **文件存储**：
+   - 文件存储根目录：`/Users/Shared/uploads`（可在配置文件中修改）
+   - 文件按日期组织目录：`yyyy/MM/dd/`
+   - 文件名格式：`sha256前8位_uuid.ext`
+   - 示例：`2025/11/11/a1b2c3d4_abc123def456.jpg`
+
+3. **图片处理**：
+   - 自动获取图片的宽度和高度
+   - 支持常见图片格式：jpg、png、gif、webp等
+   - 支持图片压缩和缩略图生成（根据配置）
+
+4. **文件类型限制**：
+   - **允许的类型**：图片(jpg/png/gif等)、文档(pdf/doc/xls等)、音视频(mp3/mp4等)、压缩包(zip/rar等)
+   - **禁止的类型**：可执行文件(exe/bat等)、脚本文件(js/jar等)
+   - 完整列表见配置文件 `file.storage.allowed-extensions` 和 `file.storage.forbidden-extensions`
+
+5. **大小限制**：
+   - 默认最大文件大小：100MB（可在配置文件中修改）
+   - Spring Boot 上传限制：单文件 20MB，单次请求 50MB
+
+**错误响应示例**：
+
+1. 文件类型不允许：
+```json
+{
+  "success": false,
+  "code": "INVALID_ARGUMENT",
+  "message": "不允许上传 .exe 类型的文件"
+}
+```
+
+2. 文件大小超限：
+```json
+{
+  "success": false,
+  "code": "INVALID_ARGUMENT",
+  "message": "文件大小超过限制，最大允许 100 MB"
+}
+```
+
+3. 上传失败：
+```json
+{
+  "success": false,
+  "code": "FILE_UPLOAD_FAILED",
+  "message": "文件上传失败：IO错误"
+}
+```
+
+**使用流程**：
+
+1. 调用此接口上传文件
+2. 获取返回的 `fileId` 和 `url`
+3. 发送IM消息时，在 `content` 中包含文件信息：
+   ```json
+   {
+     "msgType": "IMAGE",
+     "content": {
+       "fileId": 123,
+       "url": "uploads/2025/11/11/xxx.jpg",
+       "width": 1920,
+       "height": 1080
+     }
+   }
+   ```
+
+**Flutter 集成示例**：
+
+```dart
+import 'dart:io';
+import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
+
+class FileUploadService {
+  final Dio dio;
+  
+  FileUploadService(this.dio);
+  
+  /// 上传图片文件
+  Future<FileUploadResult?> uploadImage() async {
+    try {
+      // 选择图片
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      
+      if (image == null) return null;
+      
+      // 准备上传
+      FormData formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          image.path,
+          filename: image.name,
+        ),
+      });
+      
+      // 上传文件
+      final response = await dio.post(
+        '/api/v1/files/upload',
+        data: formData,
+      );
+      
+      if (response.data['success']) {
+        return FileUploadResult.fromJson(response.data['data']);
+      }
+      
+      return null;
+    } catch (e) {
+      print('上传失败: $e');
+      return null;
+    }
+  }
+}
+
+class FileUploadResult {
+  final int fileId;
+  final String url;
+  final String filename;
+  final String ext;
+  final String mimeType;
+  final int sizeBytes;
+  final int? width;
+  final int? height;
+  
+  FileUploadResult({
+    required this.fileId,
+    required this.url,
+    required this.filename,
+    required this.ext,
+    required this.mimeType,
+    required this.sizeBytes,
+    this.width,
+    this.height,
+  });
+  
+  factory FileUploadResult.fromJson(Map<String, dynamic> json) {
+    return FileUploadResult(
+      fileId: json['fileId'],
+      url: json['url'],
+      filename: json['filename'],
+      ext: json['ext'],
+      mimeType: json['mimeType'],
+      sizeBytes: json['sizeBytes'],
+      width: json['width'],
+      height: json['height'],
+    );
+  }
+}
+```
+
+---
+
+## 五、设备管理 API
+
+### 5.1 注册设备
 
 **接口**：`POST /devices`
 
@@ -1662,6 +2018,26 @@ function updateRead(convId, seq) {
 - 可通过查询该表统计已读人数
 - 当前 API 暂未提供，可根据需要扩展
 
+### Q6: 文件上传有什么限制？
+**A**: 
+- **单文件大小限制**：最大 20MB
+- **单次请求大小限制**：最大 50MB（支持多文件上传）
+- **支持的文件类型**：图片（IMAGE）、文件（FILE）、语音（AUDIO）、视频（VIDEO）
+- **超出限制的错误**：`MaxUploadSizeExceededException` 
+- **建议**：
+  - 图片在客户端压缩后再上传（推荐 < 2MB）
+  - 视频上传前检查文件大小，大视频建议使用专门的视频上传服务
+  - 大文件可以考虑分片上传或使用云存储服务
+
+**配置位置**（`application.yml`）：
+```yaml
+spring:
+  servlet:
+    multipart:
+      max-file-size: 20MB      # 单个文件最大大小
+      max-request-size: 50MB   # 单次请求最大大小
+```
+
 ---
 
 ## 附录
@@ -1686,6 +2062,15 @@ function updateRead(convId, seq) {
 
 ## 更新日志
 
+### v1.2 (2025-11-14)
+
+**新增功能**：
+- 新增删除会话接口 `DELETE /conversations/{convId}`
+  - 支持删除单聊、群聊和系统会话
+  - 删除的是用户与会话的关联关系，而非会话本身
+  - 删除后，用户将无法再看到该会话，但其他成员仍然可以看到
+  - 只能删除自己参与的会话，且只能删除本组织的会话
+
 ### v1.1 (2025-11-11)
 
 **新增功能**：
@@ -1703,6 +2088,15 @@ function updateRead(convId, seq) {
     - 图片/文件/语音/视频等显示类型标识（如 "[图片]"）
     - 已撤回消息显示 "[消息已撤回]"
   - 用于会话列表中展示最后一条消息内容
+
+- **文件上传功能**：
+  - 新增文件上传接口 `POST /api/v1/files/upload`
+  - 支持图片、文档、视频等多种文件类型
+  - 文件去重：相同内容的文件只存储一份（基于SHA256）
+  - 自动获取图片尺寸信息（width、height）
+  - 文件按日期组织目录结构
+  - 配置文件上传大小限制：单文件最大 20MB，单次请求最大 50MB
+  - 避免 `MaxUploadSizeExceededException` 错误
 
 **Bug 修复**：
 - 修复会话列表和会话详情接口中 `avatar` 字段返回 null 的问题
@@ -1739,7 +2133,7 @@ function updateRead(convId, seq) {
 
 ---
 
-**文档版本**: v1.1  
-**最后更新**: 2025-11-11  
+**文档版本**: v1.2  
+**最后更新**: 2025-11-14  
 **维护者**: 开发团队
 
