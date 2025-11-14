@@ -14,6 +14,8 @@ class ChatProvider extends ChangeNotifier {
   final WebSocketProvider _websocketProvider;
   final String convId;
   final int currentUserId;
+  final String? currentUserAvatar;
+  final String? currentUserName;
 
   List<ImMessage> _messages = [];
   List<ImMessage> get messages => _messages;
@@ -40,8 +42,13 @@ class ChatProvider extends ChangeNotifier {
     required WebSocketProvider websocketProvider,
     required this.convId,
     required this.currentUserId,
+    this.currentUserAvatar,
+    this.currentUserName,
   })  : _repository = repository,
-        _websocketProvider = websocketProvider;
+        _websocketProvider = websocketProvider {
+    // 注册 WebSocket 新消息监听器
+    _websocketProvider.addNewMessageListener(handleNewMessage);
+  }
 
   /// 初次加载
   Future<void> loadInitial() async {
@@ -124,12 +131,14 @@ class ChatProvider extends ChangeNotifier {
   Future<void> sendTextMessage(String text) async {
     final clientMsgId = _uuid.v4();
     
-    // 创建本地消息
+    // 创建本地消息（使用缓存的用户信息）
     final localMessage = ImMessage(
       id: 0, // 临时 ID
       convId: convId,
       seq: 0, // 临时 seq
       senderUserId: currentUserId,
+      senderName: currentUserName, // 使用缓存的用户名
+      senderAvatar: currentUserAvatar, // 使用缓存的头像
       msgType: 'TEXT',
       body: TextContent(text: text),
       isRevoked: false,
@@ -190,12 +199,14 @@ class ChatProvider extends ChangeNotifier {
   }) async {
     final clientMsgId = _uuid.v4();
 
-    // 创建本地消息
+    // 创建本地消息（使用缓存的用户信息）
     final localMessage = ImMessage(
       id: 0,
       convId: convId,
       seq: 0,
       senderUserId: currentUserId,
+      senderName: currentUserName, // 使用缓存的用户名
+      senderAvatar: currentUserAvatar, // 使用缓存的头像
       msgType: 'IMAGE',
       body: ImageContent(
         fileId: fileId,
@@ -258,11 +269,14 @@ class ChatProvider extends ChangeNotifier {
   }) async {
     final clientMsgId = _uuid.v4();
 
+    // 创建本地消息（使用缓存的用户信息）
     final localMessage = ImMessage(
       id: 0,
       convId: convId,
       seq: 0,
       senderUserId: currentUserId,
+      senderName: currentUserName, // 使用缓存的用户名
+      senderAvatar: currentUserAvatar, // 使用缓存的头像
       msgType: 'FILE',
       body: FileContent(
         fileId: fileId,
@@ -318,11 +332,14 @@ class ChatProvider extends ChangeNotifier {
   Future<void> sendProjectCardMessage(Map<String, dynamic> cardData) async {
     final clientMsgId = _uuid.v4();
 
+    // 创建本地消息（使用缓存的用户信息）
     final localMessage = ImMessage(
       id: 0,
       convId: convId,
       seq: 0,
       senderUserId: currentUserId,
+      senderName: currentUserName, // 使用缓存的用户名
+      senderAvatar: currentUserAvatar, // 使用缓存的头像
       msgType: 'PROJECT_CARD',
       body: ProjectCardContent.fromJson(cardData),
       isRevoked: false,
@@ -401,11 +418,29 @@ class ChatProvider extends ChangeNotifier {
   void handleNewMessage(ImMessage message) {
     if (message.convId != convId) return;
 
-    _messages.add(message);
-    notifyListeners();
+    debugPrint('ChatProvider: 收到新消息 - convId: ${message.convId}, seq: ${message.seq}, type: ${message.msgType}');
 
-    // 自动标记为已读
-    _markAsRead();
+    // 保存到本地数据库
+    ImDatabase.saveMessage(message).then((_) {
+      // 重新加载消息列表（确保消息按顺序排列）
+      _reloadMessages();
+      
+      // 自动标记为已读
+      _markAsRead();
+    }).catchError((e) {
+      debugPrint('ChatProvider: 保存新消息失败 - $e');
+      // 即使保存失败，也添加到UI显示
+      _messages.add(message);
+      notifyListeners();
+      _markAsRead();
+    });
+  }
+  
+  @override
+  void dispose() {
+    // 移除监听器，避免内存泄漏
+    _websocketProvider.removeNewMessageListener(handleNewMessage);
+    super.dispose();
   }
 }
 

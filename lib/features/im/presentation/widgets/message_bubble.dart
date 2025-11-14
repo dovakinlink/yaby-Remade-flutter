@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/core/network/api_client.dart';
+import 'package:yabai_app/features/auth/providers/user_profile_provider.dart';
 import 'package:yabai_app/features/im/data/models/im_message_model.dart';
 import 'package:yabai_app/features/im/data/models/message_content.dart';
 import 'package:yabai_app/features/im/presentation/widgets/project_card_message.dart';
@@ -101,7 +103,17 @@ class MessageBubble extends StatelessWidget {
     return Builder(
       builder: (context) {
         final apiClient = context.read<ApiClient>();
-        final avatarUrl = message.senderAvatar;
+        var avatarUrl = message.senderAvatar;
+        
+        // 如果是当前用户发送的消息且没有头像，尝试从 UserProfileProvider 获取
+        if (isMe && (avatarUrl == null || avatarUrl.isEmpty)) {
+          try {
+            final userProfile = context.read<UserProfileProvider>();
+            avatarUrl = userProfile.profile?.avatar;
+          } catch (e) {
+            // UserProfileProvider 可能不可用，忽略错误
+          }
+        }
         
         // 使用 ApiClient 解析 URL
         final resolvedUrl = avatarUrl != null && avatarUrl.isNotEmpty
@@ -203,32 +215,38 @@ class MessageBubble extends StatelessWidget {
         
         // 使用 ApiClient 解析图片 URL
         final resolvedUrl = apiClient.resolveUrlSync(imageContent.url);
+        final headers = apiClient.getAuthHeaders();
         
-        return ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: 200,
-            maxHeight: 200,
-          ),
-          child: CachedNetworkImage(
-            imageUrl: resolvedUrl,
-            httpHeaders: apiClient.getAuthHeaders(), // 添加认证头
-            fit: BoxFit.cover,
-            placeholder: (context, url) => Container(
-              width: 200,
-              height: 200,
-              color: Colors.grey[300],
-              child: const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation(AppColors.brandGreen),
+        return GestureDetector(
+          onTap: () {
+            _showImagePreview(context, resolvedUrl, headers);
+          },
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: 200,
+              maxHeight: 200,
+            ),
+            child: CachedNetworkImage(
+              imageUrl: resolvedUrl,
+              httpHeaders: headers,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                width: 200,
+                height: 200,
+                color: Colors.grey[300],
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation(AppColors.brandGreen),
+                  ),
                 ),
               ),
-            ),
-            errorWidget: (context, url, error) => Container(
-              width: 200,
-              height: 200,
-              color: Colors.grey[300],
-              child: const Center(
-                child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+              errorWidget: (context, url, error) => Container(
+                width: 200,
+                height: 200,
+                color: Colors.grey[300],
+                child: const Center(
+                  child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+                ),
               ),
             ),
           ),
@@ -236,43 +254,134 @@ class MessageBubble extends StatelessWidget {
       },
     );
   }
+  
+  /// 显示图片预览
+  void _showImagePreview(BuildContext context, String imageUrl, Map<String, String> headers) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.86),
+      builder: (dialogContext) => _ImagePreviewDialog(
+        imageUrl: imageUrl,
+        headers: headers,
+      ),
+    );
+  }
 
   Widget _buildFileContent(bool isDark) {
-    final fileContent = message.body as FileContent;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          Icons.insert_drive_file,
-          color: isMe ? Colors.white : AppColors.brandGreen,
-        ),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Builder(
+      builder: (context) {
+        final apiClient = context.read<ApiClient>();
+        final fileContent = message.body as FileContent;
+        
+        return GestureDetector(
+          onTap: () {
+            _handleFileTap(context, apiClient, fileContent);
+          },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                fileContent.filename,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isMe ? Colors.white : (isDark ? AppColors.darkNeutralText : Colors.black87),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              Icon(
+                Icons.insert_drive_file,
+                color: isMe ? Colors.white : AppColors.brandGreen,
               ),
-              if (fileContent.size != null)
-                Text(
-                  _formatFileSize(fileContent.size!),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isMe ? Colors.white70 : (isDark ? AppColors.darkSecondaryText : Colors.grey[600]),
-                  ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fileContent.filename,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isMe ? Colors.white : (isDark ? AppColors.darkNeutralText : Colors.black87),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (fileContent.size != null)
+                      Text(
+                        _formatFileSize(fileContent.size!),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isMe ? Colors.white70 : (isDark ? AppColors.darkSecondaryText : Colors.grey[600]),
+                        ),
+                      ),
+                  ],
                 ),
+              ),
             ],
           ),
-        ),
-      ],
+        );
+      },
     );
+  }
+  
+  /// 处理文件点击
+  Future<void> _handleFileTap(BuildContext context, ApiClient apiClient, FileContent fileContent) async {
+    if (fileContent.url.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('文件链接不可用')),
+        );
+      }
+      return;
+    }
+
+    try {
+      // 解析文件 URL
+      final resolvedUrl = await apiClient.resolveUrl(fileContent.url);
+      
+      if (!context.mounted) return;
+      
+      final uri = Uri.tryParse(resolvedUrl);
+      if (uri == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('无法识别的文件链接')),
+        );
+        return;
+      }
+
+      // 判断文件类型，决定打开方式
+      final fileExt = fileContent.filename.toLowerCase().split('.').last;
+      final isPdf = fileExt == 'pdf';
+      final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(fileExt);
+      final isVideo = ['mp4', 'avi', 'mov', 'mkv', 'webm'].contains(fileExt);
+      
+      LaunchMode launchMode;
+      if (isPdf || isVideo) {
+        // PDF 和视频使用外部应用打开
+        launchMode = LaunchMode.externalApplication;
+      } else if (isImage) {
+        // 图片显示预览对话框
+        final headers = apiClient.getAuthHeaders();
+        await showDialog(
+          context: context,
+          barrierColor: Colors.black.withValues(alpha: 0.86),
+          builder: (dialogContext) => _ImagePreviewDialog(
+            imageUrl: resolvedUrl,
+            headers: headers,
+            title: fileContent.filename,
+          ),
+        );
+        return;
+      } else {
+        // 其他文件使用平台默认方式打开
+        launchMode = LaunchMode.platformDefault;
+      }
+
+      final success = await launchUrl(uri, mode: launchMode);
+      if (!success && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('无法打开该文件，请稍后重试')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('打开文件失败: $e')),
+        );
+      }
+    }
   }
 
   Widget _buildStatusIndicator(bool isDark) {
@@ -307,6 +416,129 @@ class MessageBubble extends StatelessWidget {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+}
+
+/// 图片预览对话框
+class _ImagePreviewDialog extends StatelessWidget {
+  const _ImagePreviewDialog({
+    required this.imageUrl,
+    required this.headers,
+    this.title,
+  });
+
+  final String imageUrl;
+  final Map<String, String> headers;
+  final String? title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ColoredBox(
+                color: Colors.black.withValues(alpha: 0.86),
+                child: InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 4,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    headers: headers,
+                    loadingBuilder: (context, child, event) {
+                      if (event == null) {
+                        return child;
+                      }
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation(
+                            AppColors.brandGreen,
+                          ),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Center(
+                        child: Text(
+                          '图片加载失败',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+            // 顶部标题栏（如果有标题）
+            if (title != null)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  color: Colors.black.withValues(alpha: 0.32),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            // 右上角关闭按钮（如果没有标题栏，或者作为备用）
+            Positioned(
+              right: 8,
+              top: title != null ? 56 : 8,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => Navigator.of(context).pop(),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

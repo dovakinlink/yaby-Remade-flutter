@@ -33,7 +33,11 @@ class _MedApptListPageState extends State<MedApptListPage> {
 
     // 初始加载
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MedApptListProvider>().loadInitial();
+      final provider = context.read<MedApptListProvider>();
+      // 加载当前周的预约列表
+      provider.loadInitial();
+      // 加载当前月的预约日期（用于日历标注）
+      provider.loadMonthDates(_focusedDay);
     });
   }
 
@@ -182,8 +186,10 @@ class _MedApptListPageState extends State<MedApptListPage> {
         onPressed: () {
           context.pushNamed('med-appt-create').then((result) {
             if (result == true) {
-              // 创建成功后刷新列表
+              // 创建成功后刷新列表和月份预约日期
               provider.refresh();
+              // 强制刷新当前月份的预约日期
+              provider.loadMonthDates(_focusedDay, forceRefresh: true);
             }
           });
         },
@@ -274,9 +280,11 @@ class _MedApptListPageState extends State<MedApptListPage> {
           ),
         ),
         eventLoader: (day) {
-          // 返回该日期的预约标记
-          final count = provider.getAppointmentCountForDate(day);
-          return List.generate(count > 3 ? 3 : count, (index) => '•');
+          // 使用月份预约日期数据来显示标记
+          if (provider.hasAppointmentOnDate(day)) {
+            return ['•']; // 有预约的日期显示一个标记点
+          }
+          return [];
         },
         onDaySelected: (selectedDay, focusedDay) {
           setState(() {
@@ -290,7 +298,12 @@ class _MedApptListPageState extends State<MedApptListPage> {
           });
         },
         onPageChanged: (focusedDay) {
-          _focusedDay = focusedDay;
+          setState(() {
+            _focusedDay = focusedDay;
+          });
+          // 月份切换时，加载新月份的预约日期
+          final provider = context.read<MedApptListProvider>();
+          provider.loadMonthDates(focusedDay);
         },
       ),
     );

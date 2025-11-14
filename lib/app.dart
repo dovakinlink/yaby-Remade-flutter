@@ -500,7 +500,10 @@ class _YabaiAppState extends State<YabaiApp> {
                   );
                 }
 
-                final currentUserId = context.read<UserProfileProvider>().profile?.id ?? 0;
+                final userProfile = context.read<UserProfileProvider>();
+                final currentUserId = userProfile.profile?.id ?? 0;
+                final currentUserAvatar = userProfile.profile?.avatar;
+                final currentUserName = userProfile.profile?.displayName;
                 
                 return ChangeNotifierProvider(
                   create: (context) => ChatProvider(
@@ -508,6 +511,8 @@ class _YabaiAppState extends State<YabaiApp> {
                     websocketProvider: context.read<WebSocketProvider>(),
                     convId: convId,
                     currentUserId: currentUserId,
+                    currentUserAvatar: currentUserAvatar,
+                    currentUserName: currentUserName,
                   ),
                   child: ChatPage(convId: convId, title: title),
                 );
@@ -658,11 +663,16 @@ class _YabaiAppState extends State<YabaiApp> {
           create: (context) => WebSocketService(),
         ),
         ChangeNotifierProvider(
-          create: (context) => WebSocketProvider(context.read<WebSocketService>()),
+          create: (context) => WebSocketProvider(
+            context.read<WebSocketService>(),
+            authSessionProvider: context.read<AuthSessionProvider>(),
+            authRepository: context.read<AuthRepository>(),
+          ),
         ),
         ChangeNotifierProvider(
           create: (context) => ConversationListProvider(
             context.read<ImRepository>(),
+            websocketProvider: context.read<WebSocketProvider>(),
           ),
         ),
         ChangeNotifierProvider(
@@ -735,6 +745,10 @@ class _AppInitializerState extends State<_AppInitializer> {
 
     // 如果有有效的 token，跳转到首页
     if (authSession.isAuthenticated) {
+      // 刷新用户信息（确保头像等信息是最新的）
+      userProfile.loadProfile().catchError((e) {
+        debugPrint('启动时加载用户信息失败: $e');
+      });
       widget.router.go(HomePage.routePath);
       return;
     }

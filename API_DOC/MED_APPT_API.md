@@ -6,7 +6,8 @@
 
 1. **创建用药预约**：医生录入患者的用药计划信息
 2. **查询周预约列表**：护士/医生查看某周（周一到周日）的用药排班
-3. **确认用药预约**：护士确认预约安排
+3. **查询月份预约日期**：查询指定月份中有预约的日期列表，用于日历组件标注
+4. **确认用药预约**：护士确认预约安排
 
 ### 业务场景
 
@@ -559,7 +560,207 @@ class MedAppt {
 
 ---
 
-### 3. 确认用药预约
+### 3. 查询月份预约日期
+
+**接口描述**: 查询指定月份中有预约的日期列表，用于APP日历组件标注有预约的日期
+
+- **URL**: `/api/v1/med-appt/month-dates`
+- **方法**: `GET`
+- **认证**: 需要认证（Bearer Token）
+
+#### 请求参数
+
+查询参数（Query Parameters）：
+
+| 参数名 | 类型   | 必填 | 说明                                    |
+|--------|--------|------|-----------------------------------------|
+| month  | String | 是   | 月份（格式：yyyy-MM，如：2025-11）     |
+
+#### 请求头
+
+```
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+```
+
+#### 请求示例
+
+```http
+GET /api/v1/med-appt/month-dates?month=2025-11 HTTP/1.1
+Host: localhost:8090
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### cURL示例
+
+```bash
+curl -X GET 'http://localhost:8090/api/v1/med-appt/month-dates?month=2025-11' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+#### 响应示例
+
+**成功响应 (200)**:
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "data": {
+    "month": "2025-11",
+    "dates": [
+      "2025-11-01",
+      "2025-11-05",
+      "2025-11-15",
+      "2025-11-20",
+      "2025-11-25"
+    ]
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型           | 说明                                    |
+|--------|----------------|-----------------------------------------|
+| month  | String         | 查询的月份（格式：yyyy-MM）             |
+| dates  | Array<String>  | 该月中有预约的日期列表（格式：yyyy-MM-dd），按日期升序排列 |
+
+**说明**:
+- `dates` 数组中的日期已去重，每个日期只出现一次
+- 如果该月没有任何预约，`dates` 为空数组 `[]`
+- 日期格式统一为 `yyyy-MM-dd`，便于前端直接使用
+
+**失败响应 - 月份格式错误 (200)**:
+```json
+{
+  "success": false,
+  "code": "INVALID_MONTH_FORMAT",
+  "message": "月份格式不正确，应为 yyyy-MM 格式，如：2025-11",
+  "data": null
+}
+```
+
+**失败响应 - 月份范围错误 (200)**:
+```json
+{
+  "success": false,
+  "code": "INVALID_MONTH",
+  "message": "月份必须在 1-12 之间",
+  "data": null
+}
+```
+
+**失败响应 - 未登录 (200)**:
+```json
+{
+  "success": false,
+  "code": "UNAUTHORIZED",
+  "message": "请先登录",
+  "data": null
+}
+```
+
+#### Flutter 调用示例
+
+```dart
+Future<List<String>?> getMonthDates(String month) async {
+  final uri = Uri.parse('http://localhost:8090/api/v1/med-appt/month-dates')
+      .replace(queryParameters: {'month': month});
+  
+  final response = await http.get(
+    uri,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $accessToken'
+    },
+  );
+
+  final result = jsonDecode(response.body);
+  if (result['success']) {
+    final data = result['data'];
+    print('${data['month']} 月有预约的日期: ${data['dates']}');
+    return List<String>.from(data['dates']);
+  } else {
+    print('查询失败: ${result['message']}');
+    return null;
+  }
+}
+
+// 使用示例：在日历组件中标注有预约的日期
+void markAppointmentDates() async {
+  String currentMonth = '2025-11'; // 当前月份
+  List<String>? dates = await getMonthDates(currentMonth);
+  
+  if (dates != null) {
+    // 在日历组件中标注这些日期
+    for (String date in dates) {
+      // 例如：calendarWidget.markDate(date, hasAppointment: true);
+      print('日期 $date 有预约');
+    }
+  }
+}
+```
+
+#### JavaScript 调用示例
+
+```javascript
+async function getMonthDates(month) {
+  try {
+    const response = await fetch(
+      `http://localhost:8090/api/v1/med-appt/month-dates?month=${month}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    );
+    
+    const result = await response.json();
+    if (result.success) {
+      console.log(`${result.data.month} 月有预约的日期:`, result.data.dates);
+      return result.data.dates;
+    } else {
+      console.error('查询失败:', result.message);
+      return null;
+    }
+  } catch (error) {
+    console.error('请求失败:', error);
+    return null;
+  }
+}
+
+// 使用示例
+async function markCalendarDates() {
+  const currentMonth = '2025-11';
+  const dates = await getMonthDates(currentMonth);
+  
+  if (dates) {
+    // 在日历组件中标注这些日期
+    dates.forEach(date => {
+      console.log(`日期 ${date} 有预约`);
+      // 例如：calendar.markDate(date, { hasAppointment: true });
+    });
+  }
+}
+```
+
+#### 业务说明
+
+1. **用途**：主要用于APP日历组件，快速获取某个月份中哪些日期有预约，方便在日历上标注原点或特殊标记
+2. **性能优化**：只返回日期列表，不返回完整的预约详情，减少数据传输量
+3. **去重处理**：如果某一天有多个预约，该日期在结果中只出现一次
+4. **排序**：日期列表按日期升序排列，便于前端处理
+5. **组织隔离**：自动根据当前用户的组织ID过滤数据，只能查询本组织的预约
+6. **空结果处理**：如果该月没有任何预约，返回空数组，前端应正常处理
+
+---
+
+### 4. 确认用药预约
 
 **接口描述**: 护士确认用药预约安排，将预约状态从PENDING（待确认）更新为CONFIRMED（已确认）
 
@@ -807,6 +1008,8 @@ ListView.builder(
 | APPT_NOT_FOUND | 用药预约不存在 | 检查预约ID是否正确 |
 | APPT_NO_PERMISSION | 无权操作该用药预约 | 只能操作本组织的预约 |
 | APPT_UPDATE_FAILED | 更新预约状态失败 | 检查预约是否存在，或联系技术支持 |
+| INVALID_MONTH_FORMAT | 月份格式不正确 | 月份格式应为 yyyy-MM，如：2025-11 |
+| INVALID_MONTH | 月份范围错误 | 月份必须在 1-12 之间 |
 | UNAUTHORIZED | 未登录或Token过期 | 重新登录获取新Token |
 | INTERNAL_ERROR | 服务器内部错误 | 联系技术支持 |
 
@@ -816,6 +1019,7 @@ ListView.builder(
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v1.3 | 2024-11-12 | 新增查询月份预约日期接口，用于日历组件标注 |
 | v1.2 | 2024-11-09 | 新增确认用药预约接口 |
 | v1.1 | 2024-11-09 | 简化接口：医生ID自动从当前用户获取，移除CRC和护士字段 |
 | v1.0 | 2024-11-09 | 初始版本，包含创建预约和查询周预约列表功能 |

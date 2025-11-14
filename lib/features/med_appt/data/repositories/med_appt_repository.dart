@@ -173,5 +173,65 @@ class MedApptRepository {
       throw ApiException(message: '确认预约失败: ${e.toString()}');
     }
   }
+
+  /// 查询月份预约日期
+  /// 查询指定月份中有预约的日期列表，用于日历组件标注
+  Future<List<String>> getMonthDates(String month) async {
+    try {
+      debugPrint('═══ MedApptRepository: getMonthDates ═══');
+      debugPrint('查询月份: $month');
+
+      final response = await _apiClient.get(
+        '/api/v1/med-appt/month-dates',
+        queryParameters: {'month': month},
+      );
+
+      debugPrint('响应状态: ${response.statusCode}');
+
+      final body = response.data;
+      if (body == null) {
+        throw ApiException(message: '服务器未返回数据');
+      }
+
+      final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
+        body,
+        dataParser: (rawData) {
+          if (rawData is Map<String, dynamic>) {
+            return rawData;
+          }
+          return <String, dynamic>{};
+        },
+      );
+
+      if (!apiResponse.success) {
+        throw ApiException(
+          message: apiResponse.message,
+          code: apiResponse.code,
+        );
+      }
+
+      final data = apiResponse.data;
+      if (data == null || data.isEmpty) {
+        debugPrint('data为空，返回空列表');
+        return [];
+      }
+
+      final dates = data['dates'] as List<dynamic>?;
+      if (dates == null) {
+        debugPrint('dates字段为空，返回空列表');
+        return [];
+      }
+
+      final dateList = dates.map((date) => date.toString()).toList();
+      debugPrint('查询成功，共 ${dateList.length} 个日期有预约');
+      return dateList;
+    } catch (e) {
+      debugPrint('查询月份预约日期失败: $e');
+      if (e is ApiException) {
+        rethrow;
+      }
+      throw ApiException(message: '查询月份预约日期失败: ${e.toString()}');
+    }
+  }
 }
 

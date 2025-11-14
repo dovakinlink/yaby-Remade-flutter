@@ -159,8 +159,11 @@ class _ConversationSelectorPageState extends State<ConversationSelectorPage> {
     });
 
     try {
-      // 获取当前用户ID
-      final currentUserId = context.read<UserProfileProvider>().profile?.id ?? 0;
+      // 获取当前用户信息
+      final userProfile = context.read<UserProfileProvider>();
+      final currentUserId = userProfile.profile?.id ?? 0;
+      final currentUserAvatar = userProfile.profile?.avatar;
+      final currentUserName = userProfile.profile?.displayName;
 
       // 创建 ChatProvider 并发送消息
       final chatProvider = ChatProvider(
@@ -168,6 +171,8 @@ class _ConversationSelectorPageState extends State<ConversationSelectorPage> {
         websocketProvider: context.read<WebSocketProvider>(),
         convId: convId,
         currentUserId: currentUserId,
+        currentUserAvatar: currentUserAvatar,
+        currentUserName: currentUserName,
       );
 
       // 根据分享类型发送不同的消息

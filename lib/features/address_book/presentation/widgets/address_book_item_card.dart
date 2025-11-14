@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/address_book/data/models/address_book_item_model.dart';
+import 'package:yabai_app/features/im/data/models/conversation_model.dart';
 import 'package:yabai_app/features/im/providers/conversation_list_provider.dart';
 import 'package:yabai_app/features/im/presentation/pages/chat_page.dart';
 
@@ -55,7 +57,8 @@ class AddressBookItemCard extends StatelessWidget {
 
       // 显示加载提示
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+      scaffoldMessenger.showSnackBar(
         const SnackBar(
           content: Text('正在创建会话...'),
           duration: Duration(seconds: 1),
@@ -66,19 +69,26 @@ class AddressBookItemCard extends StatelessWidget {
       final conversationProvider = context.read<ConversationListProvider>();
       final conversation = await conversationProvider.createSingleConversation(item.userId!);
 
-      // 跳转到聊天页面
-      if (context.mounted) {
-        context.pushNamed(
-          ChatPage.routeName,
-          pathParameters: {
-            'convId': conversation.convId,
-          },
-          queryParameters: {
-            'title': item.name,
-          },
-        );
+      // 确保 context 仍然有效后再跳转
+      if (!context.mounted) {
+        debugPrint('Context 已失效，无法跳转到聊天页面');
+        return;
       }
+
+      // 跳转到聊天页面
+      // 使用 Navigator 而不是 context.pushNamed，确保跳转更可靠
+      final router = GoRouter.of(context);
+      router.pushNamed(
+        ChatPage.routeName,
+        pathParameters: {
+          'convId': conversation.convId,
+        },
+        queryParameters: {
+          'title': item.name,
+        },
+      );
     } catch (e) {
+      debugPrint('创建会话失败: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

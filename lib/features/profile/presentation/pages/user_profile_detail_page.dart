@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -445,32 +446,39 @@ class _UserProfileDetailPageState extends State<UserProfileDetailPage> {
   void _sendPrivateMessage(UserProfileModel profile) async {
     try {
       // 显示加载提示
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('正在创建会话...'),
-            duration: Duration(seconds: 1),
-          ),
-        );
-      }
+      if (!mounted) return;
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('正在创建会话...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
 
       // 创建单聊会话
       final conversationProvider = context.read<ConversationListProvider>();
       final conversation = await conversationProvider.createSingleConversation(profile.id);
 
-      // 跳转到聊天页面
-      if (mounted) {
-        context.pushNamed(
-          ChatPage.routeName,
-          pathParameters: {
-            'convId': conversation.convId,
-          },
-          queryParameters: {
-            'title': profile.nickname.isNotEmpty ? profile.nickname : profile.username,
-          },
-        );
+      // 确保 context 仍然有效后再跳转
+      if (!mounted) {
+        debugPrint('Context 已失效，无法跳转到聊天页面');
+        return;
       }
+
+      // 跳转到聊天页面
+      // 使用 GoRouter 确保跳转更可靠
+      final router = GoRouter.of(context);
+      router.pushNamed(
+        ChatPage.routeName,
+        pathParameters: {
+          'convId': conversation.convId,
+        },
+        queryParameters: {
+          'title': profile.nickname.isNotEmpty ? profile.nickname : profile.username,
+        },
+      );
     } catch (e) {
+      debugPrint('创建会话失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('创建会话失败: $e')),

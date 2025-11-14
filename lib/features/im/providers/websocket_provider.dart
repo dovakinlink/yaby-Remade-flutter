@@ -4,10 +4,15 @@ import 'package:yabai_app/features/im/data/services/websocket_service.dart';
 import 'package:yabai_app/features/im/data/models/ws_message.dart';
 import 'package:yabai_app/features/im/data/models/ws_message_ack.dart';
 import 'package:yabai_app/features/im/data/models/im_message_model.dart';
+import 'package:yabai_app/features/auth/providers/auth_session_provider.dart';
+import 'package:yabai_app/features/auth/data/repositories/auth_repository.dart';
+import 'package:yabai_app/features/auth/data/models/auth_exception.dart';
 
 /// WebSocket 连接状态管理
 class WebSocketProvider extends ChangeNotifier {
   final WebSocketService _websocketService;
+  final AuthSessionProvider? _authSessionProvider;
+  final AuthRepository? _authRepository;
 
   WebSocketState _state = WebSocketState.disconnected;
   WebSocketState get state => _state;
@@ -24,10 +29,42 @@ class WebSocketProvider extends ChangeNotifier {
   /// 消息确认回调映射（msgId -> callback）
   final Map<String, Completer<WsMessageAck>> _ackCompleters = {};
 
-  /// 新消息回调
-  Function(ImMessage)? onNewMessage;
+  /// 新消息回调列表（支持多个监听器）
+  final List<Function(ImMessage)> _newMessageCallbacks = [];
+  
+  /// 添加新消息监听器
+  void addNewMessageListener(Function(ImMessage) callback) {
+    if (!_newMessageCallbacks.contains(callback)) {
+      _newMessageCallbacks.add(callback);
+    }
+  }
+  
+  /// 移除新消息监听器
+  void removeNewMessageListener(Function(ImMessage) callback) {
+    _newMessageCallbacks.remove(callback);
+  }
+  
+  /// 兼容旧代码：设置单个回调（已废弃，建议使用 addNewMessageListener）
+  @Deprecated('使用 addNewMessageListener 代替')
+  set onNewMessage(Function(ImMessage)? callback) {
+    _newMessageCallbacks.clear();
+    if (callback != null) {
+      _newMessageCallbacks.add(callback);
+    }
+  }
+  
+  /// 兼容旧代码：获取回调（已废弃）
+  @Deprecated('使用 addNewMessageListener 代替')
+  Function(ImMessage)? get onNewMessage {
+    return _newMessageCallbacks.isEmpty ? null : _newMessageCallbacks.first;
+  }
 
-  WebSocketProvider(this._websocketService) {
+  WebSocketProvider(
+    this._websocketService, {
+    AuthSessionProvider? authSessionProvider,
+    AuthRepository? authRepository,
+  })  : _authSessionProvider = authSessionProvider,
+        _authRepository = authRepository {
     _init();
   }
 
@@ -46,13 +83,69 @@ class WebSocketProvider extends ChangeNotifier {
 
     // 监听新消息
     _newMessageSubscription = _websocketService.newMessageStream.listen((message) {
-      onNewMessage?.call(message);
+      // 通知所有注册的监听器
+      for (final callback in _newMessageCallbacks) {
+        try {
+          callback(message);
+        } catch (e) {
+          debugPrint('WebSocketProvider: 新消息回调执行失败 - $e');
+        }
+      }
     });
   }
 
   /// 连接 WebSocket
   Future<void> connect(String host, int port, String token) async {
-    await _websocketService.connect(host, port, token);
+    // 创建 token 获取回调，用于重连时刷新 token
+    Future<String> tokenGetter() async {
+      return await _getValidToken();
+    }
+    
+    await _websocketService.connect(host, port, token, tokenGetter: tokenGetter);
+  }
+
+  /// 获取有效的 token（如果过期则刷新）
+  Future<String> _getValidToken() async {
+    if (_authSessionProvider == null || _authRepository == null) {
+      throw Exception('AuthSessionProvider 或 AuthRepository 未设置');
+    }
+
+    final tokens = _authSessionProvider!.tokens;
+    if (tokens == null) {
+      throw Exception('未找到 token');
+    }
+
+    // 检查 access token 是否过期
+    if (!_authSessionProvider!.isAuthenticated) {
+      debugPrint('WebSocket: Access token 已过期，尝试刷新...');
+      
+      // 检查是否有 refresh token
+      if (tokens.refreshToken.isEmpty) {
+        throw Exception('Refresh token 不可用');
+      }
+
+      try {
+        // 刷新 token
+        final newTokens = await _authRepository!.refreshTokens(
+          refreshToken: tokens.refreshToken,
+        );
+        
+        // 保存新 token
+        await _authSessionProvider!.save(newTokens);
+        
+        debugPrint('WebSocket: Token 刷新成功');
+        return newTokens.accessToken;
+      } on AuthException catch (e) {
+        debugPrint('WebSocket: Token 刷新失败 - ${e.message}');
+        throw Exception('Token 刷新失败: ${e.message}');
+      } catch (e) {
+        debugPrint('WebSocket: Token 刷新出错 - $e');
+        throw Exception('Token 刷新出错: $e');
+      }
+    }
+
+    // Token 仍然有效，直接返回
+    return tokens.accessToken;
   }
 
   /// 断开连接

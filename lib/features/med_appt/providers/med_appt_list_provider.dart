@@ -37,6 +37,54 @@ class MedApptListProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String? get loadMoreError => _loadMoreError;
 
+  // 月份预约日期（用于日历标注）
+  // Key: 月份（格式：yyyy-MM），Value: 该月有预约的日期列表（格式：yyyy-MM-dd）
+  final Map<String, List<String>> _monthDates = {};
+  
+  /// 获取指定月份有预约的日期列表
+  List<String> getMonthDates(String month) {
+    return _monthDates[month] ?? [];
+  }
+  
+  /// 检查指定日期是否有预约
+  bool hasAppointmentOnDate(DateTime date) {
+    final month = '${date.year}-${date.month.toString().padLeft(2, '0')}';
+    final dateStr = med_date_utils.formatDate(date);
+    return _monthDates[month]?.contains(dateStr) ?? false;
+  }
+  
+  /// 加载指定月份的预约日期
+  /// [forceRefresh] 是否强制刷新（即使已缓存也重新加载）
+  Future<void> loadMonthDates(DateTime month, {bool forceRefresh = false}) async {
+    final monthStr = '${month.year}-${month.month.toString().padLeft(2, '0')}';
+    
+    // 如果已经加载过且不强制刷新，直接返回
+    if (!forceRefresh && _monthDates.containsKey(monthStr)) {
+      debugPrint('月份 $monthStr 的预约日期已缓存，跳过加载');
+      return;
+    }
+    
+    try {
+      debugPrint('加载月份预约日期: $monthStr${forceRefresh ? ' (强制刷新)' : ''}');
+      final dates = await _repository.getMonthDates(monthStr);
+      _monthDates[monthStr] = dates;
+      debugPrint('月份 $monthStr 有 ${dates.length} 个日期有预约: $dates');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('加载月份预约日期失败: $e');
+      // 失败时设置为空列表，避免重复请求
+      _monthDates[monthStr] = [];
+      notifyListeners();
+    }
+  }
+  
+  /// 清除指定月份的缓存（用于创建预约后刷新）
+  void clearMonthCache(DateTime month) {
+    final monthStr = '${month.year}-${month.month.toString().padLeft(2, '0')}';
+    _monthDates.remove(monthStr);
+    debugPrint('已清除月份 $monthStr 的缓存');
+  }
+
   /// 更新选中日期并重新加载
   void selectDate(DateTime date) {
     if (_selectedDate.year == date.year &&

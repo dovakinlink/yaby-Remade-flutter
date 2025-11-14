@@ -225,15 +225,27 @@ class ImDatabase {
     required int seq,
     required DateTime messageAt,
     required String preview,
+    String? messageType,
+    String? messageContent,
   }) async {
     final db = await database;
+    final updateData = <String, dynamic>{
+      'last_message_seq': seq,
+      'last_message_at': messageAt.toIso8601String(),
+      'last_message_preview': preview,
+    };
+    
+    if (messageType != null) {
+      updateData['last_message_type'] = messageType;
+    }
+    
+    if (messageContent != null) {
+      updateData['last_message_content'] = messageContent;
+    }
+    
     await db.update(
       'conversations',
-      {
-        'last_message_seq': seq,
-        'last_message_at': messageAt.toIso8601String(),
-        'last_message_preview': preview,
-      },
+      updateData,
       where: 'conv_id = ?',
       whereArgs: [convId],
     );

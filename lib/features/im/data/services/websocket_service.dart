@@ -42,8 +42,17 @@ class WebSocketService {
   final _newMessageController = StreamController<ImMessage>.broadcast();
   Stream<ImMessage> get newMessageStream => _newMessageController.stream;
 
-  /// WebSocket 服务器地址
-  String? _wsUrl;
+  /// WebSocket 服务器地址（不包含 token）
+  String? _baseWsUrl;
+  
+  /// 服务器主机地址
+  String? _host;
+  
+  /// 服务器端口
+  int? _port;
+
+  /// Token 获取回调（用于重连时获取最新 token）
+  Future<String> Function()? _tokenGetter;
 
   /// 重连次数
   int _reconnectAttempts = 0;
@@ -60,31 +69,36 @@ class WebSocketService {
   WebSocketService();
 
   /// 连接 WebSocket
-  Future<void> connect(String host, int port, String token) async {
+  Future<void> connect(String host, int port, String token, {Future<String> Function()? tokenGetter}) async {
     if (_state == WebSocketState.connected ||
         _state == WebSocketState.connecting) {
       debugPrint('WebSocket: 已连接或正在连接中');
       return;
     }
 
-    _wsUrl = 'ws://$host:$port/im/ws?token=$token';
+    _host = host;
+    _port = port;
+    _baseWsUrl = 'ws://$host:$port/im/ws';
+    _tokenGetter = tokenGetter;
     _manualDisconnect = false;
 
-    await _connect();
+    await _connectWithToken(token);
   }
 
-  /// 内部连接方法
-  Future<void> _connect() async {
-    if (_wsUrl == null) {
+  /// 使用指定 token 连接
+  Future<void> _connectWithToken(String token) async {
+    if (_baseWsUrl == null || _host == null || _port == null) {
       debugPrint('WebSocket: URL 未设置');
       return;
     }
 
+    final wsUrl = '$_baseWsUrl?token=$token';
+    
     try {
       _updateState(WebSocketState.connecting);
-      debugPrint('WebSocket: 正在连接... $_wsUrl');
+      debugPrint('WebSocket: 正在连接... ws://$_host:$_port/im/ws');
 
-      _channel = WebSocketChannel.connect(Uri.parse(_wsUrl!));
+      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
       // 监听消息
       _subscription = _channel!.stream.listen(
@@ -227,9 +241,30 @@ class WebSocketService {
     debugPrint('WebSocket: 将在 $delay 秒后重连（第 $_reconnectAttempts 次）');
 
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(Duration(seconds: delay), () {
+    _reconnectTimer = Timer(Duration(seconds: delay), () async {
       debugPrint('WebSocket: 开始重连...');
-      _connect();
+      
+      // 尝试获取最新的 token
+      String? token;
+      if (_tokenGetter != null) {
+        try {
+          token = await _tokenGetter!();
+          debugPrint('WebSocket: 已获取最新 token，准备重连');
+        } catch (e) {
+          debugPrint('WebSocket: 获取 token 失败 - $e，使用旧 token 重连');
+          // 如果获取 token 失败，继续使用旧的连接方式（可能失败）
+          // 这种情况下，重连可能会失败，但至少会尝试
+        }
+      }
+      
+      // 如果没有 token 获取器或获取失败，无法重连
+      if (token == null) {
+        debugPrint('WebSocket: 无法获取 token，取消重连');
+        _updateState(WebSocketState.disconnected);
+        return;
+      }
+      
+      await _connectWithToken(token);
     });
   }
 
