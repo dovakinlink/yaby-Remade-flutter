@@ -25,12 +25,15 @@ import 'package:yabai_app/features/home/presentation/pages/create_post_page.dart
 import 'package:yabai_app/features/home/presentation/pages/home_page.dart';
 import 'package:yabai_app/features/home/presentation/pages/project_detail_page.dart';
 import 'package:yabai_app/features/home/presentation/pages/project_list_page.dart';
+import 'package:yabai_app/features/home/presentation/pages/project_list_by_person_page.dart';
+import 'package:yabai_app/features/home/presentation/pages/my_projects_page.dart';
 import 'package:yabai_app/features/home/providers/comment_list_provider.dart';
 import 'package:yabai_app/features/home/providers/create_post_provider.dart';
 import 'package:yabai_app/features/home/providers/favorite_provider.dart';
 import 'package:yabai_app/features/home/providers/home_announcements_provider.dart';
 import 'package:yabai_app/features/home/providers/project_detail_provider.dart';
 import 'package:yabai_app/features/home/providers/project_list_provider.dart';
+import 'package:yabai_app/features/home/providers/project_list_by_person_provider.dart';
 import 'package:yabai_app/features/home/providers/project_statistics_provider.dart';
 import 'package:yabai_app/features/home/providers/share_link_provider.dart';
 import 'package:yabai_app/features/screening/data/repositories/screening_repository.dart';
@@ -267,6 +270,58 @@ class _YabaiAppState extends State<YabaiApp> {
                   ],
                 ),
               ],
+            ),
+            GoRoute(
+              path: ProjectListByPersonPage.routePath,
+              name: ProjectListByPersonPage.routeName,
+              builder: (context, state) {
+                final personIdParam = state.pathParameters['personId'];
+                if (personIdParam == null || personIdParam.isEmpty) {
+                  return Scaffold(
+                    appBar: AppBar(title: const Text('错误')),
+                    body: const Center(child: Text('无效的人员ID')),
+                  );
+                }
+
+                final extra = state.extra as Map<String, dynamic>?;
+                final personName = extra?['personName'] as String?;
+
+                return ChangeNotifierProvider(
+                  create: (context) => ProjectListByPersonProvider(
+                    repository: context.read<ProjectRepository>(),
+                    personId: personIdParam,
+                  ),
+                  child: ProjectListByPersonPage(
+                    personId: personIdParam,
+                    personName: personName,
+                  ),
+                );
+              },
+            ),
+            GoRoute(
+              path: MyProjectsPage.routePath,
+              name: MyProjectsPage.routeName,
+              builder: (context, state) {
+                final userProfile = context.read<UserProfileProvider>().profile;
+                final personId = userProfile?.personId;
+                
+                if (personId == null || personId.isEmpty) {
+                  return Scaffold(
+                    appBar: AppBar(title: const Text('我的项目')),
+                    body: const Center(
+                      child: Text('无法获取用户信息，请稍后重试'),
+                    ),
+                  );
+                }
+
+                return ChangeNotifierProvider(
+                  create: (context) => ProjectListByPersonProvider(
+                    repository: context.read<ProjectRepository>(),
+                    personId: personId,
+                  ),
+                  child: const MyProjectsPage(),
+                );
+              },
             ),
             GoRoute(
               path: ProfilePage.routePath,
@@ -659,25 +714,43 @@ class _YabaiAppState extends State<YabaiApp> {
         Provider(
           create: (context) => ImRepository(context.read<ApiClient>()),
         ),
+        ChangeNotifierProvider(
+          create: (context) => UnreadCountProvider(
+            context.read<ImRepository>(),
+          ),
+        ),
         Provider(
           create: (context) => WebSocketService(),
         ),
-        ChangeNotifierProvider(
-          create: (context) => WebSocketProvider(
-            context.read<WebSocketService>(),
-            authSessionProvider: context.read<AuthSessionProvider>(),
-            authRepository: context.read<AuthRepository>(),
-          ),
+        ProxyProvider2<UserProfileProvider, UnreadCountProvider, WebSocketProvider>(
+          create: (context) {
+            return WebSocketProvider(
+              context.read<WebSocketService>(),
+              authSessionProvider: context.read<AuthSessionProvider>(),
+              authRepository: context.read<AuthRepository>(),
+              currentUserId: context.read<UserProfileProvider>().profile?.id,
+              unreadCountProvider: context.read<UnreadCountProvider>(),
+            );
+          },
+          update: (context, userProfileProvider, unreadCountProvider, previous) {
+            if (previous == null) {
+              return WebSocketProvider(
+                context.read<WebSocketService>(),
+                authSessionProvider: context.read<AuthSessionProvider>(),
+                authRepository: context.read<AuthRepository>(),
+                currentUserId: userProfileProvider.profile?.id,
+                unreadCountProvider: unreadCountProvider,
+              );
+            }
+            // 更新未读消息数Provider引用（当UnreadCountProvider变化时）
+            previous.setUnreadCountProvider(unreadCountProvider);
+            return previous;
+          },
         ),
         ChangeNotifierProvider(
           create: (context) => ConversationListProvider(
             context.read<ImRepository>(),
             websocketProvider: context.read<WebSocketProvider>(),
-          ),
-        ),
-        ChangeNotifierProvider(
-          create: (context) => UnreadCountProvider(
-            context.read<ImRepository>(),
           ),
         ),
       ],

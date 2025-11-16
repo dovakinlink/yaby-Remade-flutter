@@ -9,6 +9,7 @@ import 'package:yabai_app/features/address_book/data/models/address_book_item_mo
 import 'package:yabai_app/features/im/data/models/conversation_model.dart';
 import 'package:yabai_app/features/im/providers/conversation_list_provider.dart';
 import 'package:yabai_app/features/im/presentation/pages/chat_page.dart';
+import 'package:yabai_app/features/profile/presentation/pages/user_profile_detail_page.dart';
 
 class AddressBookItemCard extends StatelessWidget {
   const AddressBookItemCard({
@@ -211,7 +212,19 @@ class AddressBookItemCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _showActionSheet(context),
+          onTap: () {
+            // 如果有userId，直接跳转到个人详情页
+            if (item.userId != null) {
+              debugPrint('点击通讯录卡片: ${item.name}, userId: ${item.userId}');
+              context.pushNamed(
+                UserProfileDetailPage.routeName,
+                pathParameters: {'userId': item.userId.toString()},
+              );
+            } else {
+              // 如果没有userId，显示操作菜单（保持原有行为）
+              _showActionSheet(context);
+            }
+          },
           borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),

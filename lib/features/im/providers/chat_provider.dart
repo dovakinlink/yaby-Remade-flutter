@@ -388,7 +388,12 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 标记为已读
+  /// 标记为已读（公开方法，供外部调用）
+  Future<void> markAsRead() async {
+    await _markAsRead();
+  }
+
+  /// 标记为已读（内部实现）
   Future<void> _markAsRead() async {
     if (_messages.isEmpty) return;
 
@@ -399,8 +404,16 @@ class ChatProvider extends ChangeNotifier {
       // 更新本地已读位置
       await ImDatabase.saveReadPosition(convId, lastSeq);
 
-      // 清除未读数
+      // 清除本地未读数
       await ImDatabase.clearUnreadCount(convId);
+
+      // 调用服务器API更新已读位置（重要：确保服务器端也更新）
+      try {
+        await _repository.updateReadPosition(convId, lastSeq);
+      } catch (e) {
+        debugPrint('调用服务器API更新已读位置失败: $e');
+        // 即使API调用失败，也继续发送WebSocket确认
+      }
 
       // 通过 WebSocket 发送已读确认
       final readAck = WsMessage.createReadAck(

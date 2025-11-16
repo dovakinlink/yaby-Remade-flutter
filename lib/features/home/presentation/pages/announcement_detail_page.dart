@@ -1019,7 +1019,7 @@ class _HtmlContentView extends StatelessWidget {
               return {'margin': '4px 0'};
             case 'a':
               return {
-                'color': '#36CAC4',
+                'color': '#F77924',
                 'text-decoration': 'underline',
               };
             case 'img':

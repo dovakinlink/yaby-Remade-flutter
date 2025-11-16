@@ -3,11 +3,12 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:yabai_app/core/theme/app_theme.dart';
 
 class AnimatedMedicalBackground extends StatefulWidget {
   const AnimatedMedicalBackground({
     super.key,
-    this.baseColor = const Color(0xFF36CAC4),
+    this.baseColor = AppColors.brandGreen,
     this.density = 1.4,
     this.showHelix = true,
   });
@@ -225,33 +226,27 @@ class _MedicalBackgroundPainter extends CustomPainter {
       ..shader = ui.Gradient.linear(
         Offset.zero,
         Offset(size.width, size.height),
-        const [Color(0xFF1B908B), Color(0xFF0F5F5B)],
+        const [Color(0xFFDB703E), Color(0xFFDB703E)], // 使用 #DB703E 作为背景色
       );
     canvas.drawRect(Offset.zero & size, paint);
   }
 
   void _drawRadialGlow(Canvas canvas, Size size) {
-    final Offset center = Offset(size.width * 0.25, size.height * 0.3);
-    final double radius = size.shortestSide * 0.7;
-    final Paint paint = Paint()
-      ..shader = ui.Gradient.radial(
-        center,
-        radius,
-        [const Color(0xFF58E0D9).withValues(alpha: 0.5), Colors.transparent],
-      );
-    canvas.drawCircle(center, radius, paint);
+    // 移除径向光晕，因为背景已经是纯色
   }
 
   void _drawParticles(Canvas canvas) {
+    // 运动元素使用白色
     final Paint nodePaint = Paint()
       ..style = PaintingStyle.fill
-      ..color = baseColor.withValues(alpha: 0.78);
+      ..color = Colors.white.withValues(alpha: 0.78);
     for (final _Particle particle in particles) {
       canvas.drawCircle(particle.position, particle.radius, nodePaint);
     }
   }
 
   void _drawConnections(Canvas canvas, Size size) {
+    // 连接线使用白色
     final Paint linePaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
@@ -264,7 +259,7 @@ class _MedicalBackgroundPainter extends CustomPainter {
         if (distance < _linkDistance) {
           final double t = 1 - (distance / _linkDistance);
           final double opacity = 0.08 + t * (0.33 - 0.08);
-          linePaint.color = baseColor.withValues(alpha: opacity.clamp(0.0, 1.0));
+          linePaint.color = Colors.white.withValues(alpha: opacity.clamp(0.0, 1.0));
           canvas.drawLine(p1, p2, linePaint);
         }
       }

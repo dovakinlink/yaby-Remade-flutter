@@ -242,7 +242,7 @@ class _AddressBookPageState extends State<AddressBookPage> {
                             padding: const EdgeInsets.only(
                               top: 8,
                               bottom: 80,
-                              right: 40, // 为右侧字母索引留出空间
+                              right: 52, // 为右侧字母索引留出空间（增大）
                             ),
                             itemCount: provider.groups.fold<int>(
                               0,
@@ -273,7 +273,7 @@ class _AddressBookPageState extends State<AddressBookPage> {
                 // 右侧字母索引（仅在非搜索模式下显示）
                 if (!provider.isSearchMode && provider.groups.isNotEmpty)
                   Positioned(
-                    right: 8,
+                    right: 4,
                     top: 0,
                     bottom: 0,
                     child: Center(

@@ -46,11 +46,11 @@ class _LetterIndexBarState extends State<LetterIndexBar> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      width: 24,
+      width: 36,
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: (isDark ? Colors.black : Colors.white).withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -61,19 +61,19 @@ class _LetterIndexBarState extends State<LetterIndexBar> {
           return GestureDetector(
             onTap: () => _handleLetterTap(letter),
             child: Container(
-              width: 20,
-              height: 14,
+              width: 28,
+              height: 18,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: isActive
                     ? AppColors.brandGreen.withValues(alpha: 0.2)
                     : Colors.transparent,
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(3),
               ),
               child: Text(
                 letter,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 13,
                   fontWeight: isAvailable ? FontWeight.w600 : FontWeight.normal,
                   color: isAvailable
                       ? (isActive

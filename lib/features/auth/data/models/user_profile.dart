@@ -21,6 +21,7 @@ class UserProfile {
     this.departmentName,
     this.companyId,
     this.companyName,
+    this.personId,
   });
 
   final int id;
@@ -45,6 +46,7 @@ class UserProfile {
   final String? departmentName;
   final int? companyId;
   final String? companyName;
+  final String? personId; // 人员ID（t_person.c_id），用于查询参与的项目
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
@@ -69,6 +71,7 @@ class UserProfile {
       departmentName: json['departmentName'] as String?,
       companyId: _parseNullableInt(json['companyId']),
       companyName: json['companyName'] as String?,
+      personId: json['personId'] as String?,
     );
   }
 
@@ -95,6 +98,7 @@ class UserProfile {
       'departmentName': departmentName,
       'companyId': companyId,
       'companyName': companyName,
+      'personId': personId,
     };
   }
 

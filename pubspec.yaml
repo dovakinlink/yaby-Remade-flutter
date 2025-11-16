@@ -51,6 +51,7 @@ dependencies:
   file_picker: ^8.1.4
   cached_network_image: ^3.4.1
   uuid: ^4.5.1
+  audioplayers: ^6.1.0
 
 dependency_overrides:
   flutter_widget_from_html_core:
@@ -82,18 +83,19 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/
+    - assets/sounds/
 
 # App Icon Configuration
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icons/yaby-app-icon.png"
+  image_path: "assets/icons/app-icon.png"
   min_sdk_android: 21
   # iOS specific
   remove_alpha_ios: true
   # Android specific  
-  adaptive_icon_background: "#36CAC4"
-  adaptive_icon_foreground: "assets/icons/yaby-app-icon.png"
+  adaptive_icon_background: "#F77924"
+  adaptive_icon_foreground: "assets/icons/app-icon.png"
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
@@ -23,6 +24,7 @@ import 'package:yabai_app/features/im/presentation/pages/conversation_list_page.
 import 'package:yabai_app/features/im/providers/websocket_provider.dart';
 import 'package:yabai_app/features/im/providers/unread_count_provider.dart';
 import 'package:yabai_app/features/auth/providers/auth_session_provider.dart';
+import 'package:yabai_app/features/auth/providers/user_profile_provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -301,39 +303,55 @@ class _HomePageState extends State<HomePage> {
       case '学习中心':
         context.pushNamed('learning'); // 学习资源列表页面
         break;
-      case '质控任务':
-        // TODO: 未来实现其他功能
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$label功能开发中'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+      case '我的项目':
+        final userProfile = context.read<UserProfileProvider>().profile;
+        if (userProfile?.personId != null && userProfile!.personId!.isNotEmpty) {
+          context.pushNamed('my-projects');
+        } else {
+          // 如果没有 personId，尝试重新加载用户信息
+          context.read<UserProfileProvider>().loadProfile().then((_) {
+            final updatedProfile = context.read<UserProfileProvider>().profile;
+            if (updatedProfile?.personId != null && updatedProfile!.personId!.isNotEmpty) {
+              if (context.mounted) {
+                context.pushNamed('my-projects');
+              }
+            } else {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('无法获取用户信息，请稍后重试'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            }
+          });
+        }
         break;
     }
   }
 
   Widget _buildQuickActionsRow(bool isDark) {
-    const actions = <Map<String, String>>[
+    const actions = <Map<String, dynamic>>[
       {
         'label': '通讯录',
-        'asset': 'assets/icons/tongxunlu.png',
-        'darkAsset': 'assets/icons/tongxunlu-white.png',
+        'asset': 'assets/images/Call.svg',
+        'isSvg': true,
       },
       {
         'label': '用药预约',
-        'asset': 'assets/icons/hulibeiwang.png',
-        'darkAsset': 'assets/icons/hulibeiwang-white.png',
+        'asset': 'assets/icons/Calendar.svg',
+        'isSvg': true,
       },
       {
-        'label': '质控任务',
-        'asset': 'assets/icons/zhikongrenwu.png',
-        'darkAsset': 'assets/icons/zhikongrenwu-white.png',
+        'label': '我的项目',
+        'asset': 'assets/images/Folder.svg',
+        'isSvg': true,
       },
       {
         'label': '学习中心',
-        'asset': 'assets/icons/hulibeiwang.png',
-        'darkAsset': 'assets/icons/hulibeiwang-white.png',
+        'asset': 'assets/images/Image.svg',
+        'isSvg': true,
       },
     ];
 
@@ -364,12 +382,22 @@ class _HomePageState extends State<HomePage> {
                         SizedBox(
                           height: 48,
                           width: 48,
-                          child: Image.asset(
-                            isDark
-                                ? (action['darkAsset'] ?? action['asset'])!
-                                : action['asset']!,
-                            fit: BoxFit.contain,
-                          ),
+                          child: action['isSvg'] == true
+                              ? SvgPicture.asset(
+                                  action['asset']!,
+                                  width: 48,
+                                  height: 48,
+                                  colorFilter: ColorFilter.mode(
+                                    isDark ? Colors.white : Colors.black,
+                                    BlendMode.srcIn,
+                                  ),
+                                )
+                              : Image.asset(
+                                  isDark
+                                      ? (action['darkAsset'] ?? action['asset'])!
+                                      : action['asset']!,
+                                  fit: BoxFit.contain,
+                                ),
                         ),
                         const SizedBox(height: 10),
                         Text(

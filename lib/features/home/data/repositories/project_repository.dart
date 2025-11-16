@@ -274,6 +274,74 @@ class ProjectRepository {
     }
   }
 
+  /// 根据人员ID查询项目列表
+  Future<PageResponse<ProjectModel>> fetchProjectsByPersonId({
+    required String personId,
+    int page = 1,
+    int size = 10,
+  }) async {
+    try {
+      final queryParameters = <String, dynamic>{
+        'page': page,
+        'size': size,
+      };
+
+      final response = await _apiClient.get(
+        '/api/v1/projects/by-person/$personId',
+        queryParameters: queryParameters,
+      );
+
+      final body = response.data;
+
+      if (body == null) {
+        throw ApiException(message: '服务器未返回数据');
+      }
+
+      final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
+        body,
+        dataParser: (rawData) {
+          if (rawData is Map<String, dynamic>) {
+            return rawData;
+          }
+          return <String, dynamic>{};
+        },
+      );
+
+      if (!apiResponse.success) {
+        throw ApiException(
+          message: apiResponse.message,
+          code: apiResponse.code,
+        );
+      }
+
+      final data = apiResponse.data;
+
+      if (data == null || data.isEmpty) {
+        return PageResponse<ProjectModel>.empty();
+      }
+
+      return PageResponse<ProjectModel>.fromJson(
+        data,
+        ProjectModel.fromJson,
+      );
+    } on DioException catch (error) {
+      final dynamic responseBody = error.response?.data;
+      String? code;
+      String message = '网络请求失败';
+      if (responseBody is Map<String, dynamic>) {
+        code = responseBody['code'] as String?;
+        message = responseBody['message'] as String? ?? message;
+      } else if (error.message != null) {
+        message = error.message!;
+      }
+      throw ApiException(message: message, code: code);
+    } on ApiException {
+      rethrow;
+    } catch (error) {
+      throw ApiException(message: '查询人员项目列表失败: $error');
+    }
+  }
+
   /// 生成项目分享链接
   Future<ShareLinkModel> generateShareLink(int projectId) async {
     try {

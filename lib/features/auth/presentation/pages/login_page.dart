@@ -220,12 +220,6 @@ class _LoginPageState extends State<LoginPage> {
                                                       if (!context.mounted) {
                                                         return;
                                                       }
-                                                      ScaffoldMessenger.of(context)
-                                                          .showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text('登陆成功'),
-                                                        ),
-                                                      );
                                                       context.go(HomePage.routePath);
                                                     } on AuthException catch (error) {
                                                       if (!context.mounted) {

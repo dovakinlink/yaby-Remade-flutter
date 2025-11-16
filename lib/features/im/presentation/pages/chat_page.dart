@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
@@ -7,9 +9,13 @@ import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/core/services/file_upload_service.dart';
 import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/features/im/providers/chat_provider.dart';
+import 'package:yabai_app/features/im/providers/conversation_list_provider.dart';
+import 'package:yabai_app/features/im/providers/unread_count_provider.dart';
 import 'package:yabai_app/features/im/presentation/widgets/message_bubble.dart';
+import 'package:yabai_app/features/im/presentation/widgets/message_date_separator.dart';
 import 'package:yabai_app/features/im/presentation/widgets/chat_input_bar.dart';
 import 'package:yabai_app/features/im/data/models/conversation_model.dart';
+import 'package:yabai_app/features/im/data/models/im_message_model.dart';
 
 /// 聊天页面
 class ChatPage extends StatefulWidget {
@@ -69,7 +75,14 @@ class _ChatPageState extends State<ChatPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final provider = context.watch<ChatProvider>();
 
-    return Scaffold(
+    return PopScope(
+      onPopInvoked: (didPop) async {
+        if (didPop) {
+          // 页面退出时，更新会话列表和总未读数
+          await _onPageExit(context);
+        }
+      },
+      child: Scaffold(
       backgroundColor: isDark
           ? AppColors.darkScaffoldBackground
           : const Color(0xFFF8F9FA),
@@ -108,7 +121,62 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ],
       ),
+      ),
     );
+  }
+
+  /// 生成包含日期分隔符的列表项
+  List<_ListItem> _buildListItemsWithDateSeparators(ChatProvider provider) {
+    final items = <_ListItem>[];
+    
+    // 如果正在加载更多，在最前面插入加载指示器
+    if (provider.isLoadingMore) {
+      items.add(_LoadingItem());
+    }
+
+    DateTime? lastDate;
+    
+    for (var i = 0; i < provider.messages.length; i++) {
+      final message = provider.messages[i];
+      final messageDate = DateTime(
+        message.createdAt.year,
+        message.createdAt.month,
+        message.createdAt.day,
+      );
+
+      // 如果日期与上一条消息不同，插入日期分隔符
+      if (lastDate == null || messageDate != lastDate) {
+        items.add(_DateSeparatorItem(date: message.createdAt));
+        lastDate = messageDate;
+      }
+
+      // 添加消息
+      items.add(_MessageItem(message: message));
+    }
+
+    return items;
+  }
+
+  /// 页面退出时的处理：更新会话列表和总未读数
+  Future<void> _onPageExit(BuildContext context) async {
+    try {
+      // 确保标记为已读（如果还没有）
+      final chatProvider = context.read<ChatProvider>();
+      await chatProvider.markAsRead();
+
+      // 更新会话列表（清除该会话的未读数）
+      final conversationListProvider = context.read<ConversationListProvider>();
+      await conversationListProvider.clearUnreadCount(widget.convId);
+      
+      // 刷新会话列表以获取最新的未读数
+      await conversationListProvider.refresh();
+
+      // 更新总未读数
+      final unreadCountProvider = context.read<UnreadCountProvider>();
+      await unreadCountProvider.loadUnreadCount();
+    } catch (e) {
+      debugPrint('页面退出时更新角标失败: $e');
+    }
   }
 
   Widget _buildMessageList(ChatProvider provider, bool isDark) {
@@ -154,12 +222,17 @@ class _ChatPageState extends State<ChatPage> {
       );
     }
 
+    // 生成包含日期分隔符的列表项
+    final listItems = _buildListItemsWithDateSeparators(provider);
+
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: provider.messages.length + (provider.isLoadingMore ? 1 : 0),
+      itemCount: listItems.length,
       itemBuilder: (context, index) {
-        if (index == 0 && provider.isLoadingMore) {
+        final item = listItems[index];
+        
+        if (item is _LoadingItem) {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(16),
@@ -173,16 +246,18 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ),
           );
+        } else if (item is _DateSeparatorItem) {
+          return MessageDateSeparator(date: item.date);
+        } else if (item is _MessageItem) {
+          final message = item.message;
+          final isMe = message.senderUserId == provider.currentUserId;
+          return MessageBubble(
+            message: message,
+            isMe: isMe,
+          );
         }
-
-        final messageIndex = provider.isLoadingMore ? index - 1 : index;
-        final message = provider.messages[messageIndex];
-        final isMe = message.senderUserId == provider.currentUserId;
-
-        return MessageBubble(
-          message: message,
-          isMe: isMe,
-        );
+        
+        return const SizedBox.shrink();
       },
     );
   }
@@ -335,6 +410,24 @@ class _ChatPageState extends State<ChatPage> {
       }
     }
   }
+}
+
+/// 列表项基类
+abstract class _ListItem {}
+
+/// 加载指示器项
+class _LoadingItem extends _ListItem {}
+
+/// 日期分隔符项
+class _DateSeparatorItem extends _ListItem {
+  final DateTime date;
+  _DateSeparatorItem({required this.date});
+}
+
+/// 消息项
+class _MessageItem extends _ListItem {
+  final ImMessage message;
+  _MessageItem({required this.message});
 }
 
 /// 上传进度对话框

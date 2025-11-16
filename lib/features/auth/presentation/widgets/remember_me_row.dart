@@ -34,7 +34,7 @@ class RememberMeRow extends StatelessWidget {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Switch(value: value, onChanged: onChanged),
+              _buildCustomSwitch(value: value, onChanged: onChanged),
               const SizedBox(width: 8),
               const Text('记住我'),
               const Spacer(),
@@ -48,7 +48,7 @@ class RememberMeRow extends StatelessWidget {
           children: [
             Row(
               children: [
-                Switch(value: value, onChanged: onChanged),
+                _buildCustomSwitch(value: value, onChanged: onChanged),
                 const SizedBox(width: 8),
                 const Text('记住我'),
               ],
@@ -57,6 +57,45 @@ class RememberMeRow extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  /// 构建自定义开关，使用品牌绿色，更加明显
+  Widget _buildCustomSwitch({
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Switch(
+      value: value,
+      onChanged: onChanged,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      // 使用品牌绿色作为激活状态的颜色，增强视觉对比度
+      thumbColor: WidgetStateProperty.resolveWith<Color>(
+        (Set<WidgetState> states) {
+          // 滑块颜色始终为白色，与背景形成对比
+          return Colors.white;
+        },
+      ),
+      trackColor: WidgetStateProperty.resolveWith<Color>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            // 激活状态：使用品牌绿色
+            return AppColors.brandGreen;
+          }
+          // 未激活状态：使用浅灰色
+          return Colors.grey[300]!;
+        },
+      ),
+      trackOutlineColor: WidgetStateProperty.resolveWith<Color>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            // 激活状态：使用品牌绿色边框
+            return AppColors.brandGreen;
+          }
+          // 未激活状态：使用深灰色边框，增强对比度
+          return Colors.grey[400]!;
+        },
+      ),
     );
   }
 }

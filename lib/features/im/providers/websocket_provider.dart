@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:yabai_app/core/services/message_sound_service.dart';
 import 'package:yabai_app/features/im/data/services/websocket_service.dart';
 import 'package:yabai_app/features/im/data/models/ws_message.dart';
 import 'package:yabai_app/features/im/data/models/ws_message_ack.dart';
 import 'package:yabai_app/features/im/data/models/im_message_model.dart';
+import 'package:yabai_app/features/im/providers/unread_count_provider.dart';
 import 'package:yabai_app/features/auth/providers/auth_session_provider.dart';
 import 'package:yabai_app/features/auth/data/repositories/auth_repository.dart';
 import 'package:yabai_app/features/auth/data/models/auth_exception.dart';
@@ -13,6 +15,11 @@ class WebSocketProvider extends ChangeNotifier {
   final WebSocketService _websocketService;
   final AuthSessionProvider? _authSessionProvider;
   final AuthRepository? _authRepository;
+  final MessageSoundService _soundService = MessageSoundService();
+  final int? _currentUserId;
+  
+  /// 未读消息数Provider的引用（可选，用于实时更新角标）
+  UnreadCountProvider? _unreadCountProvider;
 
   WebSocketState _state = WebSocketState.disconnected;
   WebSocketState get state => _state;
@@ -63,9 +70,18 @@ class WebSocketProvider extends ChangeNotifier {
     this._websocketService, {
     AuthSessionProvider? authSessionProvider,
     AuthRepository? authRepository,
+    int? currentUserId,
+    UnreadCountProvider? unreadCountProvider,
   })  : _authSessionProvider = authSessionProvider,
-        _authRepository = authRepository {
+        _authRepository = authRepository,
+        _currentUserId = currentUserId,
+        _unreadCountProvider = unreadCountProvider {
     _init();
+  }
+  
+  /// 设置未读消息数Provider（用于实时更新角标）
+  void setUnreadCountProvider(UnreadCountProvider? provider) {
+    _unreadCountProvider = provider;
   }
 
   void _init() {
@@ -83,6 +99,16 @@ class WebSocketProvider extends ChangeNotifier {
 
     // 监听新消息
     _newMessageSubscription = _websocketService.newMessageStream.listen((message) {
+      // 如果不是自己发送的消息
+      if (_currentUserId != null && message.senderUserId != _currentUserId) {
+        // 播放音效
+        _soundService.playNewMessageSound();
+        
+        // 实时更新未读消息角标（自动加1）
+        // 下次API通信后会以API返回结果为准
+        _unreadCountProvider?.incrementUnreadCount();
+      }
+      
       // 通知所有注册的监听器
       for (final callback in _newMessageCallbacks) {
         try {

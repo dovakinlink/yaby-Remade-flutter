@@ -11,6 +11,7 @@ import 'package:yabai_app/features/profile/data/models/user_profile_model.dart';
 import 'package:yabai_app/features/profile/providers/user_profile_detail_provider.dart';
 import 'package:yabai_app/features/im/providers/conversation_list_provider.dart';
 import 'package:yabai_app/features/im/presentation/pages/chat_page.dart';
+import 'package:yabai_app/features/auth/providers/user_profile_provider.dart';
 
 /// 用户详情页面
 class UserProfileDetailPage extends StatefulWidget {
@@ -162,9 +163,16 @@ class _UserProfileDetailPageState extends State<UserProfileDetailPage> {
             _buildAvatarSection(profile, isDark),
             const SizedBox(height: 32),
 
-            // 快捷操作按钮
-            _buildQuickActions(profile, isDark),
-            const SizedBox(height: 16),
+            // 快捷操作按钮（仅当不是当前登录用户时显示）
+            if (!_isCurrentUser(profile))
+              _buildQuickActions(profile, isDark),
+            if (!_isCurrentUser(profile)) const SizedBox(height: 16),
+
+            // Ta参与的项目按钮（如果有personId）
+            if (profile.personId != null && profile.personId!.isNotEmpty) ...[
+              _buildProjectsButton(profile, isDark),
+              const SizedBox(height: 16),
+            ],
 
             // 详细信息卡片
             _buildDetailInfoCard(profile, isDark),
@@ -280,6 +288,24 @@ class _UserProfileDetailPageState extends State<UserProfileDetailPage> {
     );
   }
 
+  /// 检查是否是当前登录用户
+  bool _isCurrentUser(UserProfileModel profile) {
+    final currentUser = context.read<UserProfileProvider>().profile;
+    if (currentUser == null) return false;
+    
+    // 比较手机号或用户名
+    final phoneMatch = currentUser.phone != null && 
+                       currentUser.phone!.isNotEmpty && 
+                       profile.phone.isNotEmpty &&
+                       currentUser.phone == profile.phone;
+    
+    final usernameMatch = currentUser.username.isNotEmpty && 
+                          profile.username.isNotEmpty &&
+                          currentUser.username == profile.username;
+    
+    return phoneMatch || usernameMatch;
+  }
+
   /// 快捷操作按钮
   Widget _buildQuickActions(UserProfileModel profile, bool isDark) {
     return Card(
@@ -322,6 +348,38 @@ class _UserProfileDetailPageState extends State<UserProfileDetailPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Ta参与的项目按钮卡片
+  Widget _buildProjectsButton(UserProfileModel profile, bool isDark) {
+    return Card(
+      color: Colors.white.withValues(alpha: 0.95),
+      elevation: 8,
+      shadowColor: Colors.black.withValues(alpha: 0.15),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              context.pushNamed(
+                'projects-by-person',
+                pathParameters: {'personId': profile.personId!},
+                extra: {'personName': profile.nickname.isNotEmpty ? profile.nickname : profile.username},
+              );
+            },
+            icon: const Icon(Icons.folder_outlined),
+            label: const Text('Ta参与的项目'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.brandGreen,
+              side: const BorderSide(color: AppColors.brandGreen),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
         ),
       ),
     );
@@ -445,16 +503,6 @@ class _UserProfileDetailPageState extends State<UserProfileDetailPage> {
   /// 发送私信 - 创建单聊会话
   void _sendPrivateMessage(UserProfileModel profile) async {
     try {
-      // 显示加载提示
-      if (!mounted) return;
-      final scaffoldMessenger = ScaffoldMessenger.of(context);
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text('正在创建会话...'),
-          duration: Duration(seconds: 1),
-        ),
-      );
-
       // 创建单聊会话
       final conversationProvider = context.read<ConversationListProvider>();
       final conversation = await conversationProvider.createSingleConversation(profile.id);

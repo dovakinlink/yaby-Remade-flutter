@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/home/data/models/project_detail_model.dart';
 import 'package:yabai_app/features/home/data/models/project_staff_model.dart';
 import 'package:yabai_app/features/home/presentation/widgets/project_detail/project_detail_section_container.dart';
+import 'package:yabai_app/features/profile/presentation/pages/user_profile_detail_page.dart';
 
 class ProjectBasicInfoSection extends StatelessWidget {
   const ProjectBasicInfoSection({
@@ -199,11 +201,14 @@ class ProjectBasicInfoSection extends StatelessWidget {
     String fallbackName,
   ) {
     const double size = 48;
+    final hasClickableProfile = staff?.hasUserId ?? false;
 
+    // 构建头像内容
+    Widget avatarContent;
     if (staff != null && staff.hasAvatar) {
       final apiClient = context.read<ApiClient>();
       final resolved = apiClient.resolveUrlSync(staff.avatar!);
-      return ClipOval(
+      avatarContent = ClipOval(
         child: Image.network(
           resolved,
           width: size,
@@ -215,12 +220,29 @@ class ProjectBasicInfoSection extends StatelessWidget {
           },
         ),
       );
+    } else if (staff != null) {
+      avatarContent = _buildInitialAvatar(staff.initial, size: size);
+    } else {
+      avatarContent = _buildInitialAvatar(_initialFromName(fallbackName), size: size);
     }
 
-    if (staff != null) {
-      return _buildInitialAvatar(staff.initial, size: size);
+    // 包装InkWell（仅当有userId时）
+    Widget avatar = avatarContent;
+    if (hasClickableProfile) {
+      avatar = InkWell(
+        onTap: () {
+          debugPrint('点击PI头像: ${staff!.personName}, userId: ${staff.userId}');
+          context.pushNamed(
+            UserProfileDetailPage.routeName,
+            pathParameters: {'userId': staff.userId.toString()},
+          );
+        },
+        borderRadius: BorderRadius.circular(24),
+        child: avatarContent,
+      );
     }
-    return _buildInitialAvatar(_initialFromName(fallbackName), size: size);
+
+    return avatar;
   }
 
   Widget _buildInitialAvatar(String initial, {double size = 48}) {
