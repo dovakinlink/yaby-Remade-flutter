@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/im/data/models/conversation_model.dart';
 import 'package:yabai_app/features/im/providers/conversation_list_provider.dart';
+import 'package:yabai_app/features/im/providers/websocket_provider.dart';
 import 'package:yabai_app/features/im/presentation/widgets/conversation_list_item.dart';
 import 'package:yabai_app/features/im/presentation/pages/chat_page.dart';
 
@@ -38,7 +39,11 @@ class _ConversationListPageState extends State<ConversationListPage> {
           : const Color(0xFFF8F9FA),
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text('聊天'),
+        title: Consumer<WebSocketProvider>(
+          builder: (context, websocketProvider, child) {
+            return _buildConnectionStatus(websocketProvider, isDark);
+          },
+        ),
         backgroundColor: isDark
             ? AppColors.darkScaffoldBackground
             : Colors.white,
@@ -187,16 +192,6 @@ class _ConversationListPageState extends State<ConversationListPage> {
                   context.pushNamed('address-book');
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.group_add, color: AppColors.brandGreen),
-                title: const Text('创建群聊'),
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('群聊功能将在后续版本中开放')),
-                  );
-                },
-              ),
             ],
           ),
         );
@@ -295,6 +290,43 @@ class _ConversationListPageState extends State<ConversationListPage> {
           ),
         );
       }
+    }
+  }
+
+  /// 构建连接状态指示器
+  Widget _buildConnectionStatus(WebSocketProvider websocketProvider, bool isDark) {
+    if (websocketProvider.isConnected) {
+      // 已连接：显示app主色调颜色的"在线"两字
+      return Text(
+        '在线',
+        style: TextStyle(
+          color: AppColors.brandGreen,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      );
+    } else if (websocketProvider.isConnecting || websocketProvider.isReconnecting) {
+      // 连接中/重连中：显示旋转的加载图标
+      return SizedBox(
+        width: 16,
+        height: 16,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(
+            isDark ? AppColors.darkSecondaryText : Colors.grey[600]!,
+          ),
+        ),
+      );
+    } else {
+      // 未连接：显示灰色圆点
+      return Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSecondaryText : Colors.grey[400]!,
+          shape: BoxShape.circle,
+        ),
+      );
     }
   }
 }

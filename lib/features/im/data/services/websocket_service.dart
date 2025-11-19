@@ -65,6 +65,9 @@ class WebSocketService {
 
   /// 是否主动断开（如果是，则不自动重连）
   bool _manualDisconnect = false;
+  
+  /// 获取是否主动断开
+  bool get isManualDisconnect => _manualDisconnect;
 
   WebSocketService();
 

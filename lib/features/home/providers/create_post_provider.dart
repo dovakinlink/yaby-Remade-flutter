@@ -80,6 +80,27 @@ class CreatePostProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// 将文本内容转换为HTML格式（保留换行）
+  String _convertTextToHtml(String text) {
+    // 先去除首尾空白
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return '<p></p>';
+    
+    // 转义HTML特殊字符
+    final escaped = trimmed
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    
+    // 将换行符转换为 <br> 标签
+    final withBreaks = escaped.replaceAll('\n', '<br>');
+    
+    // 用段落标签包裹
+    return '<p>$withBreaks</p>';
+  }
+
   /// 提交帖子
   Future<AnnouncementModel?> submitPost({required int hospitalId}) async {
     if (!canSubmit) return null;
@@ -89,11 +110,13 @@ class CreatePostProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      final contentHtml = _convertTextToHtml(_content);
+      
       final request = CreatePostRequest(
         hospitalId: hospitalId,
         tagId: _selectedTag!.id,
         title: _title.trim(),
-        contentHtml: '<p>${_content.trim()}</p>',
+        contentHtml: contentHtml,
         contentText: _content.trim(),
       );
 

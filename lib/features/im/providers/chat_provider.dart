@@ -66,13 +66,24 @@ class ChatProvider extends ChangeNotifier {
         await ImDatabase.saveConversation(_conversation!);
       }
 
-      // 加载本地消息
+      // 加载本地消息（获取最新的50条）
       _messages = await ImDatabase.getMessages(convId, limit: 50);
       _messages = _messages.reversed.toList(); // 反转为正序（旧 -> 新）
       notifyListeners();
 
-      // 如果本地消息较少，从服务器加载更多
+      // 获取本地最大seq
+      final localMaxSeq = _messages.isNotEmpty ? _messages.last.seq : 0;
+      
+      // 检查是否有遗漏的消息（会话的lastMessageSeq > 本地最大seq）
+      final hasMissingMessages = _conversation!.lastMessageSeq > localMaxSeq;
+      
       if (_messages.length < 20) {
+        // 本地消息较少，从服务器加载更多历史消息
+        await _loadHistoryFromServer();
+      } else if (hasMissingMessages) {
+        // 本地消息足够，但检测到有遗漏的消息（可能是在会话列表页面收到但未完全同步）
+        debugPrint('检测到遗漏的消息：会话lastSeq=${_conversation!.lastMessageSeq}, 本地maxSeq=$localMaxSeq');
+        // 从服务器加载最新的消息（不使用maxSeq，加载最新的50条，会自动补齐遗漏的消息）
         await _loadHistoryFromServer();
       }
 

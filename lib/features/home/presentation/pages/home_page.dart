@@ -23,6 +23,7 @@ import 'package:yabai_app/features/ai/presentation/pages/ai_entry_page.dart';
 import 'package:yabai_app/features/im/presentation/pages/conversation_list_page.dart';
 import 'package:yabai_app/features/im/providers/websocket_provider.dart';
 import 'package:yabai_app/features/im/providers/unread_count_provider.dart';
+import 'package:yabai_app/features/im/providers/conversation_list_provider.dart';
 import 'package:yabai_app/features/auth/providers/auth_session_provider.dart';
 import 'package:yabai_app/features/auth/providers/user_profile_provider.dart';
 
@@ -36,7 +37,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   late final ScrollController _scrollController;
   int _currentTab = 0;
   static const _placeholderValue = '--';
@@ -45,6 +46,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _scrollController = ScrollController()..addListener(_handleScroll);
     
     // 加载标签列表
@@ -57,6 +59,46 @@ class _HomePageState extends State<HomePage> {
       // 启动定时器，每1分钟更新一次未读消息总数
       _startUnreadCountTimer();
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // App恢复前台时，检查并重连WebSocket，刷新会话列表
+      debugPrint('App恢复前台，检查WebSocket连接...');
+      _handleAppResumed();
+    }
+  }
+
+  /// 处理App恢复前台
+  Future<void> _handleAppResumed() async {
+    try {
+      final websocketProvider = context.read<WebSocketProvider>();
+      final authSession = context.read<AuthSessionProvider>();
+      
+      if (!authSession.isAuthenticated) {
+        return;
+      }
+
+      // 如果WebSocket未连接，尝试重连
+      if (!websocketProvider.isConnected && !websocketProvider.isConnecting) {
+        debugPrint('WebSocket未连接，尝试重连...');
+        await _ensureWebSocketConnection();
+      }
+
+      // 刷新会话列表（会从服务器拉取最新数据，包括离线期间的消息）
+      if (_currentTab == 1) {
+        // 如果当前在聊天tab，刷新会话列表
+        final conversationListProvider = context.read<ConversationListProvider>();
+        await conversationListProvider.refresh();
+      }
+
+      // 刷新未读消息总数
+      _loadUnreadCount();
+    } catch (e) {
+      debugPrint('App恢复时处理失败: $e');
+    }
   }
 
   /// 确保 WebSocket 已连接
@@ -112,6 +154,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController
       ..removeListener(_handleScroll)
       ..dispose();

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:yabai_app/core/services/message_sound_service.dart';
+import 'package:yabai_app/core/config/env_config.dart';
 import 'package:yabai_app/features/im/data/services/websocket_service.dart';
 import 'package:yabai_app/features/im/data/models/ws_message.dart';
 import 'package:yabai_app/features/im/data/models/ws_message_ack.dart';
@@ -179,8 +180,118 @@ class WebSocketProvider extends ChangeNotifier {
     _websocketService.disconnect();
   }
 
+  /// 等待连接完成（如果正在连接或重连中）
+  Future<void> _waitForConnection({Duration timeout = const Duration(seconds: 30)}) async {
+    // 如果已连接，直接返回
+    if (_state == WebSocketState.connected) {
+      return;
+    }
+
+    // 如果正在连接或重连中，等待完成
+    if (_state == WebSocketState.connecting || _state == WebSocketState.reconnecting) {
+      debugPrint('WebSocketProvider: 正在连接中，等待连接完成...');
+      await _waitForStateChange(timeout: timeout);
+      if (_state == WebSocketState.connected) {
+        return; // 连接成功
+      }
+    }
+
+    // 如果已断开且不是主动断开，尝试重新连接
+    if (_state == WebSocketState.disconnected && !_websocketService.isManualDisconnect) {
+      debugPrint('WebSocketProvider: 连接已断开，尝试重新连接...');
+      try {
+        await _reconnectIfNeeded();
+        // 等待连接完成
+        await _waitForStateChange(timeout: timeout);
+      } catch (e) {
+        debugPrint('WebSocketProvider: 重连失败 - $e');
+        rethrow;
+      }
+    }
+
+    // 最终检查连接状态
+    if (_state != WebSocketState.connected) {
+      throw Exception('WebSocket 连接失败，当前状态: $_state');
+    }
+  }
+
+  /// 等待状态变化为 connected
+  Future<void> _waitForStateChange({Duration timeout = const Duration(seconds: 30)}) async {
+    if (_state == WebSocketState.connected) {
+      return;
+    }
+
+    final completer = Completer<void>();
+    late StreamSubscription subscription;
+    
+    subscription = _websocketService.stateStream.listen((state) {
+      if (state == WebSocketState.connected) {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+        subscription.cancel();
+      } else if (state == WebSocketState.disconnected && !_websocketService.isManualDisconnect) {
+        // 如果连接失败且不是主动断开，尝试重连
+        _reconnectIfNeeded().catchError((e) {
+          if (!completer.isCompleted) {
+            completer.completeError(e);
+          }
+          subscription.cancel();
+        });
+      }
+    });
+
+    try {
+      await completer.future.timeout(
+        timeout,
+        onTimeout: () {
+          subscription.cancel();
+          throw TimeoutException('等待连接超时，当前状态: $_state');
+        },
+      );
+    } finally {
+      await subscription.cancel();
+    }
+  }
+
+  /// 如果需要，尝试重新连接
+  Future<void> _reconnectIfNeeded() async {
+    if (_authSessionProvider == null) {
+      throw Exception('AuthSessionProvider 未设置，无法重连');
+    }
+
+    if (!_authSessionProvider!.isAuthenticated) {
+      throw Exception('用户未登录，无法重连');
+    }
+
+    final tokens = _authSessionProvider!.tokens;
+    if (tokens == null) {
+      throw Exception('未找到 token，无法重连');
+    }
+
+    try {
+      // 获取最新的 token
+      final token = await _getValidToken();
+      
+      // 获取服务器地址
+      final baseUrl = await EnvConfig.resolveApiBaseUrl();
+      final uri = Uri.parse(baseUrl);
+      final host = uri.host;
+      final port = uri.port;
+
+      debugPrint('WebSocketProvider: 尝试重新连接 - host: $host, port: $port');
+      await connect(host, port, token);
+    } catch (e) {
+      debugPrint('WebSocketProvider: 重连失败 - $e');
+      rethrow;
+    }
+  }
+
   /// 发送消息并等待确认
   Future<WsMessageAck> sendMessageAndWaitAck(WsMessage message, {Duration timeout = const Duration(seconds: 10)}) async {
+    // 确保连接已建立
+    await _waitForConnection();
+
     // 创建 Completer 等待确认
     final completer = Completer<WsMessageAck>();
     _ackCompleters[message.msgId] = completer;
@@ -205,6 +316,8 @@ class WebSocketProvider extends ChangeNotifier {
 
   /// 发送消息（不等待确认）
   Future<void> sendMessage(WsMessage message) async {
+    // 确保连接已建立
+    await _waitForConnection();
     await _websocketService.sendMessage(message);
   }
 

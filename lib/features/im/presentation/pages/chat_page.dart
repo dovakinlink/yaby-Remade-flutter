@@ -38,6 +38,7 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
+  bool _hasScrolledToBottom = false; // 标记是否已经滚动到底部
 
   @override
   void initState() {
@@ -45,8 +46,21 @@ class _ChatPageState extends State<ChatPage> {
     _scrollController.addListener(_handleScroll);
     
     // 页面加载时自动加载聊天记录
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ChatProvider>().loadInitial();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final provider = context.read<ChatProvider>();
+      await provider.loadInitial();
+      // 加载完成后，延迟滚动到底部（等待UI渲染完成）
+      if (mounted && !_hasScrolledToBottom) {
+        // 等待两帧，确保ListView已经渲染完成
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && !_hasScrolledToBottom) {
+              _scrollToBottom();
+              _hasScrolledToBottom = true;
+            }
+          });
+        });
+      }
     });
   }
 
@@ -74,6 +88,18 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final provider = context.watch<ChatProvider>();
+
+    // 监听消息列表变化，首次加载完成后自动滚动到底部
+    if (!provider.isInitialLoading && provider.messages.isNotEmpty && !_hasScrolledToBottom) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !_hasScrolledToBottom && _scrollController.hasClients) {
+            _scrollToBottom();
+            _hasScrolledToBottom = true;
+          }
+        });
+      });
+    }
 
     return PopScope(
       onPopInvoked: (didPop) async {

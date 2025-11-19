@@ -722,7 +722,7 @@ class _YabaiAppState extends State<YabaiApp> {
         Provider(
           create: (context) => WebSocketService(),
         ),
-        ProxyProvider2<UserProfileProvider, UnreadCountProvider, WebSocketProvider>(
+        ChangeNotifierProxyProvider2<UserProfileProvider, UnreadCountProvider, WebSocketProvider>(
           create: (context) {
             return WebSocketProvider(
               context.read<WebSocketService>(),

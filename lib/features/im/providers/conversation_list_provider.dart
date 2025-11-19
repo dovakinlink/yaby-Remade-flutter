@@ -23,6 +23,9 @@ class ConversationListProvider extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
+  /// 上次WebSocket连接状态（用于避免重复刷新）
+  bool _lastWebSocketConnected = false;
+
   ConversationListProvider(
     this._repository, {
     WebSocketProvider? websocketProvider,
@@ -30,6 +33,26 @@ class ConversationListProvider extends ChangeNotifier {
     // 注册 WebSocket 新消息监听器，用于实时更新会话列表
     if (_websocketProvider != null) {
       _websocketProvider!.addNewMessageListener(handleNewMessage);
+      // 监听WebSocket连接状态变化，重连成功后自动刷新会话列表
+      _websocketProvider!.addListener(_onWebSocketStateChanged);
+      // 初始化连接状态
+      _lastWebSocketConnected = _websocketProvider!.isConnected;
+    }
+  }
+
+  /// WebSocket连接状态变化回调
+  void _onWebSocketStateChanged() {
+    if (_websocketProvider != null && _websocketProvider!.isConnected) {
+      // 只有在从断开状态变为连接状态时才刷新（避免重复刷新）
+      if (!_lastWebSocketConnected) {
+        debugPrint('ConversationListProvider: WebSocket重连成功，刷新会话列表');
+        _lastWebSocketConnected = true;
+        refresh().catchError((e) {
+          debugPrint('ConversationListProvider: WebSocket重连后刷新失败 - $e');
+        });
+      }
+    } else {
+      _lastWebSocketConnected = false;
     }
   }
 
@@ -142,6 +165,11 @@ class ConversationListProvider extends ChangeNotifier {
   Future<void> handleNewMessage(ImMessage message) async {
     try {
       debugPrint('ConversationListProvider: 收到新消息 - convId: ${message.convId}, seq: ${message.seq}, type: ${message.msgType}');
+      
+      // 重要：先保存消息到本地数据库，确保消息不会丢失
+      // 这样无论用户在哪个页面，收到消息时都会被保存
+      await ImDatabase.saveMessage(message);
+      debugPrint('ConversationListProvider: 消息已保存到本地数据库');
       
       // 获取消息预览文本
       final preview = message.getPreviewText();
@@ -319,6 +347,7 @@ class ConversationListProvider extends ChangeNotifier {
     // 移除监听器，避免内存泄漏
     if (_websocketProvider != null) {
       _websocketProvider!.removeNewMessageListener(handleNewMessage);
+      _websocketProvider!.removeListener(_onWebSocketStateChanged);
     }
     super.dispose();
   }
