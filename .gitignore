@@ -10,3 +10,14 @@ build/
 .metadata
 .flutter-plugins-dependencies
 .flutter-plugins
+
+# Android 签名文件 - 不要提交到版本控制
+android/key.properties
+android/app/upload-keystore.jks
+android/app/*.jks
+*.keystore
+
+# iOS 签名文件
+ios/Runner/GoogleService-Info.plist
+ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
+ios/Runner.xcworkspace/xcuserdata/
