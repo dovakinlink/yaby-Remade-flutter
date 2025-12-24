@@ -75,7 +75,6 @@ class WebSocketService {
   Future<void> connect(String host, int port, String token, {Future<String> Function()? tokenGetter}) async {
     if (_state == WebSocketState.connected ||
         _state == WebSocketState.connecting) {
-      debugPrint('WebSocket: 已连接或正在连接中');
       return;
     }
 
@@ -91,7 +90,6 @@ class WebSocketService {
   /// 使用指定 token 连接
   Future<void> _connectWithToken(String token) async {
     if (_baseWsUrl == null || _host == null || _port == null) {
-      debugPrint('WebSocket: URL 未设置');
       return;
     }
 
@@ -99,7 +97,6 @@ class WebSocketService {
     
     try {
       _updateState(WebSocketState.connecting);
-      debugPrint('WebSocket: 正在连接... ws://$_host:$_port/im/ws');
 
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
@@ -111,7 +108,6 @@ class WebSocketService {
       );
 
       _updateState(WebSocketState.connected);
-      debugPrint('WebSocket: 连接成功');
 
       // 重置重连次数
       _reconnectAttempts = 0;
@@ -119,7 +115,6 @@ class WebSocketService {
       // 启动心跳
       _startHeartbeat();
     } catch (e) {
-      debugPrint('WebSocket: 连接失败 - $e');
       _updateState(WebSocketState.disconnected);
       _scheduleReconnect();
     }
@@ -127,7 +122,6 @@ class WebSocketService {
 
   /// 断开连接
   void disconnect() {
-    debugPrint('WebSocket: 主动断开连接');
     _manualDisconnect = true;
     _cleanup();
     _updateState(WebSocketState.disconnected);
@@ -153,10 +147,8 @@ class WebSocketService {
       (_) {
         if (_state == WebSocketState.connected) {
           try {
-            debugPrint('WebSocket: 发送心跳 PING');
             _channel?.sink.add('PING');
           } catch (e) {
-            debugPrint('WebSocket: 心跳发送失败 - $e');
           }
         }
       },
@@ -168,7 +160,6 @@ class WebSocketService {
     try {
       // PONG 响应，忽略
       if (data == 'PONG') {
-        debugPrint('WebSocket: 收到心跳响应 PONG');
         return;
       }
 
@@ -180,11 +171,9 @@ class WebSocketService {
         // 这是消息确认（ACK）
         final ack = WsMessageAck.fromJson(json);
         _ackController.add(ack);
-        debugPrint('WebSocket: 收到 ACK - msgId: ${ack.msgId}, success: ${ack.success}');
       } else if (json.containsKey('type')) {
         // 这是服务端推送
         final type = json['type'] as String;
-        debugPrint('WebSocket: 收到推送消息 - type: $type');
 
         switch (type) {
           case WsMessageType.msgReceived:
@@ -202,13 +191,11 @@ class WebSocketService {
         }
       }
     } catch (e) {
-      debugPrint('WebSocket: 消息解析失败 - $e');
     }
   }
 
   /// 处理错误
   void _onError(dynamic error) {
-    debugPrint('WebSocket: 连接错误 - $error');
     _updateState(WebSocketState.disconnected);
     _cleanup();
     _scheduleReconnect();
@@ -216,7 +203,6 @@ class WebSocketService {
 
   /// 处理连接关闭
   void _onDone() {
-    debugPrint('WebSocket: 连接已关闭');
     _updateState(WebSocketState.disconnected);
     _cleanup();
     _scheduleReconnect();
@@ -226,13 +212,11 @@ class WebSocketService {
   void _scheduleReconnect() {
     // 如果是主动断开，不重连
     if (_manualDisconnect) {
-      debugPrint('WebSocket: 主动断开，不重连');
       return;
     }
 
     // 超过最大重连次数
     if (_reconnectAttempts >= _maxReconnectAttempts) {
-      debugPrint('WebSocket: 已达到最大重连次数 $_maxReconnectAttempts');
       return;
     }
 
@@ -241,20 +225,16 @@ class WebSocketService {
 
     // 指数退避策略：2^n 秒（最多 60 秒）
     final delay = (2 << (_reconnectAttempts - 1)).clamp(1, 60);
-    debugPrint('WebSocket: 将在 $delay 秒后重连（第 $_reconnectAttempts 次）');
 
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(Duration(seconds: delay), () async {
-      debugPrint('WebSocket: 开始重连...');
       
       // 尝试获取最新的 token
       String? token;
       if (_tokenGetter != null) {
         try {
           token = await _tokenGetter!();
-          debugPrint('WebSocket: 已获取最新 token，准备重连');
         } catch (e) {
-          debugPrint('WebSocket: 获取 token 失败 - $e，使用旧 token 重连');
           // 如果获取 token 失败，继续使用旧的连接方式（可能失败）
           // 这种情况下，重连可能会失败，但至少会尝试
         }
@@ -262,7 +242,6 @@ class WebSocketService {
       
       // 如果没有 token 获取器或获取失败，无法重连
       if (token == null) {
-        debugPrint('WebSocket: 无法获取 token，取消重连');
         _updateState(WebSocketState.disconnected);
         return;
       }
@@ -280,9 +259,7 @@ class WebSocketService {
     try {
       final json = jsonEncode(message.toJson());
       _channel?.sink.add(json);
-      debugPrint('WebSocket: 发送消息 - type: ${message.type}, msgId: ${message.msgId}');
     } catch (e) {
-      debugPrint('WebSocket: 发送消息失败 - $e');
       rethrow;
     }
   }
@@ -292,13 +269,11 @@ class WebSocketService {
     if (_state != newState) {
       _state = newState;
       _stateController.add(newState);
-      debugPrint('WebSocket: 状态变更 - $_state');
     }
   }
 
   /// 释放资源
   void dispose() {
-    debugPrint('WebSocket: 释放资源');
     disconnect();
     _stateController.close();
     _messageController.close();

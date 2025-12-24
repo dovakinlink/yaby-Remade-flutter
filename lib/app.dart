@@ -703,7 +703,7 @@ class _YabaiAppState extends State<YabaiApp> {
         ),
         ChangeNotifierProvider(create: (_) => LoginFormProvider()),
         Provider(
-          create: (context) => AiRepository(),
+          create: (context) => AiRepository(apiClient: context.read<ApiClient>()),
         ),
         Provider(
           create: (context) => AddressBookRepository(context.read<ApiClient>()),

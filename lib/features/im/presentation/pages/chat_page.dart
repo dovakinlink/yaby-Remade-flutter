@@ -201,7 +201,6 @@ class _ChatPageState extends State<ChatPage> {
       final unreadCountProvider = context.read<UnreadCountProvider>();
       await unreadCountProvider.loadUnreadCount();
     } catch (e) {
-      debugPrint('页面退出时更新角标失败: $e');
     }
   }
 

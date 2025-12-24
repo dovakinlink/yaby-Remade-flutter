@@ -115,7 +115,6 @@ class WebSocketProvider extends ChangeNotifier {
         try {
           callback(message);
         } catch (e) {
-          debugPrint('WebSocketProvider: 新消息回调执行失败 - $e');
         }
       }
     });
@@ -144,7 +143,6 @@ class WebSocketProvider extends ChangeNotifier {
 
     // 检查 access token 是否过期
     if (!_authSessionProvider!.isAuthenticated) {
-      debugPrint('WebSocket: Access token 已过期，尝试刷新...');
       
       // 检查是否有 refresh token
       if (tokens.refreshToken.isEmpty) {
@@ -160,13 +158,10 @@ class WebSocketProvider extends ChangeNotifier {
         // 保存新 token
         await _authSessionProvider!.save(newTokens);
         
-        debugPrint('WebSocket: Token 刷新成功');
         return newTokens.accessToken;
       } on AuthException catch (e) {
-        debugPrint('WebSocket: Token 刷新失败 - ${e.message}');
         throw Exception('Token 刷新失败: ${e.message}');
       } catch (e) {
-        debugPrint('WebSocket: Token 刷新出错 - $e');
         throw Exception('Token 刷新出错: $e');
       }
     }
@@ -189,7 +184,6 @@ class WebSocketProvider extends ChangeNotifier {
 
     // 如果正在连接或重连中，等待完成
     if (_state == WebSocketState.connecting || _state == WebSocketState.reconnecting) {
-      debugPrint('WebSocketProvider: 正在连接中，等待连接完成...');
       await _waitForStateChange(timeout: timeout);
       if (_state == WebSocketState.connected) {
         return; // 连接成功
@@ -198,13 +192,11 @@ class WebSocketProvider extends ChangeNotifier {
 
     // 如果已断开且不是主动断开，尝试重新连接
     if (_state == WebSocketState.disconnected && !_websocketService.isManualDisconnect) {
-      debugPrint('WebSocketProvider: 连接已断开，尝试重新连接...');
       try {
         await _reconnectIfNeeded();
         // 等待连接完成
         await _waitForStateChange(timeout: timeout);
       } catch (e) {
-        debugPrint('WebSocketProvider: 重连失败 - $e');
         rethrow;
       }
     }
@@ -279,10 +271,8 @@ class WebSocketProvider extends ChangeNotifier {
       final host = uri.host;
       final port = uri.port;
 
-      debugPrint('WebSocketProvider: 尝试重新连接 - host: $host, port: $port');
       await connect(host, port, token);
     } catch (e) {
-      debugPrint('WebSocketProvider: 重连失败 - $e');
       rethrow;
     }
   }

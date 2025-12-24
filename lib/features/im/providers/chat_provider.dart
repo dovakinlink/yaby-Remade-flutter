@@ -82,7 +82,6 @@ class ChatProvider extends ChangeNotifier {
         await _loadHistoryFromServer();
       } else if (hasMissingMessages) {
         // 本地消息足够，但检测到有遗漏的消息（可能是在会话列表页面收到但未完全同步）
-        debugPrint('检测到遗漏的消息：会话lastSeq=${_conversation!.lastMessageSeq}, 本地maxSeq=$localMaxSeq');
         // 从服务器加载最新的消息（不使用maxSeq，加载最新的50条，会自动补齐遗漏的消息）
         await _loadHistoryFromServer();
       }
@@ -90,7 +89,6 @@ class ChatProvider extends ChangeNotifier {
       // 标记为已读
       await _markAsRead();
     } catch (e) {
-      debugPrint('聊天页面加载失败: $e');
       _errorMessage = e.toString();
     } finally {
       _isInitialLoading = false;
@@ -109,7 +107,6 @@ class ChatProvider extends ChangeNotifier {
       final oldestSeq = _messages.first.seq;
       await _loadHistoryFromServer(maxSeq: oldestSeq);
     } catch (e) {
-      debugPrint('加载更多消息失败: $e');
     } finally {
       _isLoadingMore = false;
       notifyListeners();
@@ -193,7 +190,6 @@ class ChatProvider extends ChangeNotifier {
         await _reloadMessages();
       }
     } catch (e) {
-      debugPrint('发送消息失败: $e');
       // 标记为失败
       await ImDatabase.updateMessageStatus(clientMsgId, MessageStatus.failed);
       await _reloadMessages();
@@ -265,7 +261,6 @@ class ChatProvider extends ChangeNotifier {
         await _reloadMessages();
       }
     } catch (e) {
-      debugPrint('发送图片消息失败: $e');
       await ImDatabase.updateMessageStatus(clientMsgId, MessageStatus.failed);
       await _reloadMessages();
     }
@@ -333,7 +328,6 @@ class ChatProvider extends ChangeNotifier {
         await _reloadMessages();
       }
     } catch (e) {
-      debugPrint('发送文件消息失败: $e');
       await ImDatabase.updateMessageStatus(clientMsgId, MessageStatus.failed);
       await _reloadMessages();
     }
@@ -386,7 +380,6 @@ class ChatProvider extends ChangeNotifier {
         await _reloadMessages();
       }
     } catch (e) {
-      debugPrint('发送项目卡片消息失败: $e');
       await ImDatabase.updateMessageStatus(clientMsgId, MessageStatus.failed);
       await _reloadMessages();
     }
@@ -422,7 +415,6 @@ class ChatProvider extends ChangeNotifier {
       try {
         await _repository.updateReadPosition(convId, lastSeq);
       } catch (e) {
-        debugPrint('调用服务器API更新已读位置失败: $e');
         // 即使API调用失败，也继续发送WebSocket确认
       }
 
@@ -434,7 +426,6 @@ class ChatProvider extends ChangeNotifier {
       );
       await _websocketProvider.sendMessage(readAck);
     } catch (e) {
-      debugPrint('标记已读失败: $e');
     }
   }
 
@@ -442,7 +433,6 @@ class ChatProvider extends ChangeNotifier {
   void handleNewMessage(ImMessage message) {
     if (message.convId != convId) return;
 
-    debugPrint('ChatProvider: 收到新消息 - convId: ${message.convId}, seq: ${message.seq}, type: ${message.msgType}');
 
     // 保存到本地数据库
     ImDatabase.saveMessage(message).then((_) {
@@ -452,7 +442,6 @@ class ChatProvider extends ChangeNotifier {
       // 自动标记为已读
       _markAsRead();
     }).catchError((e) {
-      debugPrint('ChatProvider: 保存新消息失败 - $e');
       // 即使保存失败，也添加到UI显示
       _messages.add(message);
       notifyListeners();

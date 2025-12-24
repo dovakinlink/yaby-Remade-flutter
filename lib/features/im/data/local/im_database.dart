@@ -486,7 +486,6 @@ class ImDatabase {
 
   /// 清空所有 IM 数据（用户登出时调用）
   static Future<void> clearAllData() async {
-    debugPrint('清空所有 IM 本地数据');
     final db = await database;
     
     // 清空所有表
@@ -494,7 +493,6 @@ class ImDatabase {
     await db.delete('messages');
     await db.delete('read_positions');
     
-    debugPrint('IM 本地数据已清空');
   }
 }
 

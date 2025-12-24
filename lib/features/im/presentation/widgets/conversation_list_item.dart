@@ -213,27 +213,22 @@ class ConversationListItem extends StatelessWidget {
 
   /// 根据 API 新增字段生成最后一条消息的文案
   String _buildLastMessageText(Conversation c) {
-    debugPrint('会话列表项 ${c.title}: type=${c.lastMessageType}, content=${c.lastMessageContent}, preview=${c.lastMessagePreview}');
     
     // 优先规则：
     // 1) 如果 lastMessageType == 'TEXT' 且 lastMessageContent 有内容，显示其内容
     if ((c.lastMessageType == 'TEXT') &&
         (c.lastMessageContent != null && c.lastMessageContent!.trim().isNotEmpty)) {
-      debugPrint('  -> 显示 lastMessageContent: ${c.lastMessageContent}');
       return c.lastMessageContent!;
     }
     // 2) 如果 lastMessageType == 'PROJECT_CARD'，显示项目卡片标识
     if (c.lastMessageType == 'PROJECT_CARD') {
-      debugPrint('  -> 显示 PROJECT_CARD 摘要');
       return '[项目卡片]';
     }
     // 3) 若有历史兼容字段 lastMessagePreview，回退显示
     if (c.lastMessagePreview != null && c.lastMessagePreview!.trim().isNotEmpty) {
-      debugPrint('  -> 显示 lastMessagePreview: ${c.lastMessagePreview}');
       return c.lastMessagePreview!;
     }
     // 4) 无内容则显示占位
-    debugPrint('  -> 显示默认占位');
     return '暂无内容';
   }
 }

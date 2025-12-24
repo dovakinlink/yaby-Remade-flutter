@@ -29,7 +29,7 @@ class PageResponse<T> {
         ? rawList
               .whereType<Map<String, dynamic>>()
               .map(fromJsonT)
-              .toList(growable: false)
+              .toList()
         : <T>[];
 
     return PageResponse<T>(

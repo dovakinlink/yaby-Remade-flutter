@@ -30,9 +30,7 @@ class UnreadCountProvider extends ChangeNotifier {
       final count = await _repository.getUnreadCount();
       _unreadCount = count;
       _lastUpdateTime = DateTime.now();
-      debugPrint('IM未读消息总数: $count');
     } catch (e) {
-      debugPrint('获取未读消息总数失败: $e');
       // 出错时保持原有数值，不影响用户体验
     } finally {
       _isLoading = false;

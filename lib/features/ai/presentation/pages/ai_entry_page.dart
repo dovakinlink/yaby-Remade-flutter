@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/ai/data/repositories/ai_repository.dart';
 import 'package:yabai_app/features/ai/providers/ai_query_provider.dart';
+import 'package:yabai_app/features/ai/providers/ai_session_list_provider.dart';
 import 'package:yabai_app/features/ai/presentation/pages/ai_page.dart';
+import 'package:yabai_app/features/ai/presentation/pages/ai_session_list_page.dart';
 
 class AiEntryPage extends StatelessWidget {
   const AiEntryPage({super.key});
@@ -160,8 +162,8 @@ class AiEntryPage extends StatelessWidget {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ChangeNotifierProvider(
-          create: (_) => AiQueryProvider(repository),
-          child: const _AiPageScaffold(),
+          create: (_) => AiSessionListProvider(repository)..loadInitial(),
+          child: const AiSessionListPage(),
         ),
       ),
     );

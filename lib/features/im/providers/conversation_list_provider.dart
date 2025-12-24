@@ -45,10 +45,8 @@ class ConversationListProvider extends ChangeNotifier {
     if (_websocketProvider != null && _websocketProvider!.isConnected) {
       // 只有在从断开状态变为连接状态时才刷新（避免重复刷新）
       if (!_lastWebSocketConnected) {
-        debugPrint('ConversationListProvider: WebSocket重连成功，刷新会话列表');
         _lastWebSocketConnected = true;
         refresh().catchError((e) {
-          debugPrint('ConversationListProvider: WebSocket重连后刷新失败 - $e');
         });
       }
     } else {
@@ -72,7 +70,6 @@ class ConversationListProvider extends ChangeNotifier {
       // 再从服务器刷新
       await _loadFromServer();
     } catch (e) {
-      debugPrint('会话列表加载失败: $e');
       _errorMessage = e.toString();
     } finally {
       _isInitialLoading = false;
@@ -91,7 +88,6 @@ class ConversationListProvider extends ChangeNotifier {
     try {
       await _loadFromServer();
     } catch (e) {
-      debugPrint('会话列表刷新失败: $e');
       _errorMessage = e.toString();
     } finally {
       _isRefreshing = false;
@@ -105,7 +101,6 @@ class ConversationListProvider extends ChangeNotifier {
 
     // 调试：打印从API获取的会话信息
     for (final conv in conversations) {
-      debugPrint('服务器会话 ${conv.title}: type=${conv.type.value}, targetUserId=${conv.targetUserId}, convId=${conv.convId}');
     }
 
     // 保存到本地数据库
@@ -118,7 +113,6 @@ class ConversationListProvider extends ChangeNotifier {
     
     // 调试：打印从数据库读取的会话信息
     for (final conv in _conversations) {
-      debugPrint('数据库会话 ${conv.title}: type=${conv.type.value}, targetUserId=${conv.targetUserId}, convId=${conv.convId}');
     }
     
     notifyListeners();
@@ -137,9 +131,7 @@ class ConversationListProvider extends ChangeNotifier {
     }
 
     // 调试：打印从API获取的会话信息
-    debugPrint('从服务器获取了 ${allConversations.length} 个会话');
     for (final conv in allConversations) {
-      debugPrint('服务器会话 ${conv.title}: type=${conv.type.value}, targetUserId=${conv.targetUserId}, convId=${conv.convId}');
     }
 
     // 保存到本地数据库
@@ -152,7 +144,6 @@ class ConversationListProvider extends ChangeNotifier {
     
     // 调试：打印从数据库读取的会话信息
     for (final conv in _conversations) {
-      debugPrint('数据库会话 ${conv.title}: type=${conv.type.value}, targetUserId=${conv.targetUserId}, convId=${conv.convId}');
     }
     
     notifyListeners();
@@ -164,12 +155,10 @@ class ConversationListProvider extends ChangeNotifier {
   /// 处理新消息（更新会话列表）
   Future<void> handleNewMessage(ImMessage message) async {
     try {
-      debugPrint('ConversationListProvider: 收到新消息 - convId: ${message.convId}, seq: ${message.seq}, type: ${message.msgType}');
       
       // 重要：先保存消息到本地数据库，确保消息不会丢失
       // 这样无论用户在哪个页面，收到消息时都会被保存
       await ImDatabase.saveMessage(message);
-      debugPrint('ConversationListProvider: 消息已保存到本地数据库');
       
       // 获取消息预览文本
       final preview = message.getPreviewText();
@@ -206,9 +195,7 @@ class ConversationListProvider extends ChangeNotifier {
       }
       
       notifyListeners();
-      debugPrint('ConversationListProvider: 会话列表已更新');
     } catch (e) {
-      debugPrint('ConversationListProvider: 处理新消息失败 - $e');
     }
   }
 
@@ -224,7 +211,6 @@ class ConversationListProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('清除未读数失败: $e');
     }
   }
 
@@ -232,23 +218,18 @@ class ConversationListProvider extends ChangeNotifier {
   /// 先调用API删除服务器端的关联关系，成功后再删除本地数据库
   Future<void> deleteConversation(String convId) async {
     try {
-      debugPrint('开始删除会话: convId=$convId');
       
       // 1. 先调用API删除服务器端的关联关系
       await _repository.deleteConversation(convId);
-      debugPrint('服务器端删除成功');
       
       // 2. 删除本地数据库
       await ImDatabase.deleteConversation(convId);
-      debugPrint('本地数据库删除成功');
       
       // 3. 从内存列表中移除
       _conversations.removeWhere((c) => c.convId == convId);
       notifyListeners();
       
-      debugPrint('会话删除完成');
     } catch (e) {
-      debugPrint('删除会话失败: $e');
       rethrow;
     }
   }
@@ -256,70 +237,53 @@ class ConversationListProvider extends ChangeNotifier {
   /// 创建单聊会话（如果已存在则复用）
   Future<Conversation> createSingleConversation(int targetUserId) async {
     try {
-      debugPrint('=== 开始创建单聊会话: targetUserId=$targetUserId ===');
       
       // 1. 先检查本地数据库是否已有该用户的会话
       Conversation? existingConversation = await ImDatabase.findSingleConversation(targetUserId);
       
       if (existingConversation != null) {
-        debugPrint('✓ 步骤1: 在本地数据库找到已存在的单聊会话: convId=${existingConversation.convId}, targetUserId=${existingConversation.targetUserId}');
         return existingConversation;
       }
-      debugPrint('✗ 步骤1: 本地数据库未找到会话');
       
       // 2. 本地没有，从服务器获取最新的会话列表（返回服务器原始数据）
-      debugPrint('步骤2: 从服务器获取最新的会话列表...');
       final serverConversations = await _loadFromServerAndReturn();
       
       // 3. 检查服务器返回的会话列表（优先使用服务器原始数据，包含最新的targetUserId）
-      debugPrint('步骤3: 检查服务器返回的会话列表（共${serverConversations.length}个）...');
       for (final conv in serverConversations) {
         if (conv.type == ConversationType.single && conv.targetUserId == targetUserId) {
-          debugPrint('✓ 步骤3: 在服务器会话列表中找到匹配的会话: convId=${conv.convId}, targetUserId=${conv.targetUserId}');
           // 确保保存到数据库（使用服务器返回的数据）
           await ImDatabase.saveConversation(conv);
           return conv;
         }
       }
-      debugPrint('✗ 步骤3: 服务器会话列表中未找到匹配的会话');
       
       // 4. 再次检查本地数据库（可能服务器上有但本地还没同步）
       existingConversation = await ImDatabase.findSingleConversation(targetUserId);
       if (existingConversation != null) {
-        debugPrint('✓ 步骤4: 刷新后在本地数据库找到会话: convId=${existingConversation.convId}');
         return existingConversation;
       }
-      debugPrint('✗ 步骤4: 刷新后本地数据库仍未找到会话');
       
       // 5. 检查本地数据库中的会话列表（从数据库加载的）
-      debugPrint('步骤5: 检查本地数据库会话列表（共${_conversations.length}个）...');
       for (final conv in _conversations) {
         if (conv.type == ConversationType.single && conv.targetUserId == targetUserId) {
-          debugPrint('✓ 步骤5: 在本地数据库会话列表中找到匹配的会话: convId=${conv.convId}, targetUserId=${conv.targetUserId}');
           return conv;
         }
       }
-      debugPrint('✗ 步骤5: 本地数据库会话列表中未找到匹配的会话');
       
       // 6. 调用API创建/获取会话（API端保证幂等性，如果已存在则返回现有会话）
-      debugPrint('步骤6: 调用API创建/获取单聊会话: targetUserId=$targetUserId');
       final conversation = await _repository.createSingleConversation(targetUserId);
-      debugPrint('API返回会话: convId=${conversation.convId}, targetUserId=${conversation.targetUserId}');
       
       // 7. 检查返回的会话是否已存在于本地数据库（通过 convId）
       final existingByConvId = await ImDatabase.getConversation(conversation.convId);
       if (existingByConvId != null) {
-        debugPrint('✓ 步骤7: API返回的会话已存在于本地数据库: convId=${conversation.convId}');
         // 更新 targetUserId（如果之前没有或不同）
         if (existingByConvId.targetUserId != targetUserId) {
           final updatedConv = existingByConvId.copyWith(targetUserId: targetUserId);
           await ImDatabase.saveConversation(updatedConv);
-          debugPrint('已更新会话的 targetUserId: ${existingByConvId.targetUserId} -> $targetUserId');
           return updatedConv;
         }
         return existingByConvId;
       }
-      debugPrint('✗ 步骤7: API返回的会话不存在于本地数据库');
       
       // 8. 确保 targetUserId 被设置（API可能不返回）
       final conversationWithTargetId = conversation.targetUserId == null
@@ -327,17 +291,14 @@ class ConversationListProvider extends ChangeNotifier {
           : conversation;
       
       // 9. 保存到本地数据库
-      debugPrint('步骤9: 保存新会话到本地数据库: convId=${conversationWithTargetId.convId}, targetUserId=${conversationWithTargetId.targetUserId}');
       await ImDatabase.saveConversation(conversationWithTargetId);
       
       // 10. 重新加载会话列表
       _conversations = await ImDatabase.getConversations();
       notifyListeners();
       
-      debugPrint('=== 创建单聊会话完成: convId=${conversationWithTargetId.convId} ===');
       return conversationWithTargetId;
     } catch (e) {
-      debugPrint('创建单聊会话失败: $e');
       rethrow;
     }
   }
