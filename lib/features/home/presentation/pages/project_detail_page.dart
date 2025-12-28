@@ -14,6 +14,9 @@ import 'package:yabai_app/features/home/providers/favorite_provider.dart';
 import 'package:yabai_app/features/home/providers/project_detail_provider.dart';
 import 'package:yabai_app/features/home/providers/share_link_provider.dart';
 import 'package:yabai_app/features/screening/presentation/pages/screening_submit_page.dart';
+import 'package:yabai_app/features/ai/data/repositories/ai_repository.dart';
+import 'package:yabai_app/features/ai/providers/xiaobai_chat_provider.dart';
+import 'package:yabai_app/features/ai/presentation/pages/xiaobai_project_chat_page.dart';
 
 class ProjectDetailPage extends StatefulWidget {
   const ProjectDetailPage({super.key, required this.projectId});
@@ -278,6 +281,44 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     }
   }
 
+  void _openXiaobaiChat() {
+    final project = context.read<ProjectDetailProvider>().project;
+    if (project == null) return;
+    
+    final repository = context.read<AiRepository>();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ChangeNotifierProvider(
+          create: (_) => XiaobaiChatProvider(repository)
+            ..initFromProject(
+              projectId: project.id,
+              projectName: project.projName,
+              projectShortTitle: project.shortTitle,
+            ),
+          child: XiaobaiProjectChatPage(
+            projectId: project.id,
+            projectName: project.projName,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _navigateToScreening() {
+    final project = context.read<ProjectDetailProvider>().project;
+    if (project == null) return;
+    
+    context.pushNamed(
+      ScreeningSubmitPage.routeName,
+      pathParameters: {'id': project.id.toString()},
+      extra: {
+        'projectId': project.id,
+        'projectName': project.projName,
+        'criteria': project.criteria,
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -317,26 +358,42 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
         ],
       ),
       body: _buildBody(provider, isDark),
-      floatingActionButton: provider.project != null && provider.project!.hasCriteria
-          ? FloatingActionButton(
-              onPressed: () {
-                final project = provider.project!;
-                context.pushNamed(
-                  ScreeningSubmitPage.routeName,
-                  pathParameters: {'id': project.id.toString()},
-                  extra: {
-                    'projectId': project.id,
-                    'projectName': project.projName,
-                    'criteria': project.criteria,
-                  },
-                );
-              },
-              backgroundColor: AppColors.brandGreen,
-              child: const Icon(
-                Icons.add,
-                color: Colors.white,
-                size: 28,
-              ),
+      floatingActionButton: provider.project != null
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // 临床问答按钮
+                FloatingActionButton.extended(
+                  onPressed: () => _openXiaobaiChat(),
+                  heroTag: 'xiaobai_chat',
+                  backgroundColor: Colors.blue,
+                  icon: const Icon(Icons.chat, color: Colors.white),
+                  label: const Text(
+                    '临床问答',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // 筛查患者按钮（原有）
+                if (provider.project!.hasCriteria)
+                  FloatingActionButton.extended(
+                    onPressed: () => _navigateToScreening(),
+                    heroTag: 'screening',
+                    backgroundColor: AppColors.brandGreen,
+                    icon: const Icon(Icons.person_add, color: Colors.white),
+                    label: const Text(
+                      '筛查患者',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
             )
           : null,
     );

@@ -1,21 +1,22 @@
 import 'package:flutter/foundation.dart';
 import 'package:yabai_app/core/network/api_exception.dart';
-import 'package:yabai_app/features/ai/data/models/ai_session_model.dart';
+import 'package:yabai_app/features/ai/data/models/xiaobai_session_model.dart';
 import 'package:yabai_app/features/ai/data/repositories/ai_repository.dart';
 
-class AiSessionListProvider extends ChangeNotifier {
-  AiSessionListProvider(this._repository);
+/// 小白Agent - 会话列表Provider
+class XiaobaiSessionListProvider extends ChangeNotifier {
+  XiaobaiSessionListProvider(this._repository);
 
   final AiRepository _repository;
 
-  List<AiSessionModel> _sessions = [];
+  List<XiaobaiSessionModel> _sessions = [];
   bool _isLoading = false;
   bool _isLoadingMore = false;
   String? _errorMessage;
   int _currentPage = 1;
   bool _hasMore = true;
 
-  List<AiSessionModel> get sessions => _sessions;
+  List<XiaobaiSessionModel> get sessions => _sessions;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
   String? get errorMessage => _errorMessage;
@@ -33,13 +34,9 @@ class AiSessionListProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final pageResponse = await _repository.getAiHistory(
-        page: 1,
-        size: 20,
-        agent: 'xiaoya', // 找项目的AI历史会话需要传入agent=xiaoya
-      );
+      final pageResponse = await _repository.getXiaobaiSessions(page: 1, size: 20);
       // 创建新的可增长列表，避免固定长度列表问题
-      _sessions = List<AiSessionModel>.from(pageResponse.data);
+      _sessions = List<XiaobaiSessionModel>.from(pageResponse.data);
       _hasMore = pageResponse.data.length >= 20;
       _errorMessage = null;
     } on ApiException catch (e) {
@@ -64,10 +61,9 @@ class AiSessionListProvider extends ChangeNotifier {
 
     try {
       final nextPage = _currentPage + 1;
-      final pageResponse = await _repository.getAiHistory(
+      final pageResponse = await _repository.getXiaobaiSessions(
         page: nextPage,
         size: 20,
-        agent: 'xiaoya', // 找项目的AI历史会话需要传入agent=xiaoya
       );
       
       if (pageResponse.data.isEmpty) {
@@ -94,4 +90,3 @@ class AiSessionListProvider extends ChangeNotifier {
     await loadInitial();
   }
 }
-

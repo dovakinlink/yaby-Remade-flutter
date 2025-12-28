@@ -12,6 +12,11 @@ import 'package:yabai_app/features/ai/data/models/ai_query_request.dart';
 import 'package:yabai_app/features/ai/data/models/ai_query_request_v2.dart';
 import 'package:yabai_app/features/ai/data/models/ai_query_response.dart';
 import 'package:yabai_app/features/ai/data/models/ai_session_model.dart';
+import 'package:yabai_app/features/ai/data/models/xiaobai_patient_project_model.dart';
+import 'package:yabai_app/features/ai/data/models/xiaobai_query_request.dart';
+import 'package:yabai_app/features/ai/data/models/xiaobai_query_response.dart';
+import 'package:yabai_app/features/ai/data/models/xiaobai_session_model.dart';
+import 'package:yabai_app/features/ai/data/models/xiaobai_session_detail_model.dart';
 
 class AiRepository {
   AiRepository({ApiClient? apiClient}) : _apiClient = apiClient {
@@ -276,23 +281,32 @@ class AiRepository {
   /// 
   /// [page] 页码（从 1 开始）
   /// [size] 每页数量
+  /// [agent] 可选的 Agent 名称，用于筛选特定 Agent 的对话历史
   Future<PageResponse<AiSessionModel>> getAiHistory({
     int page = 1,
     int size = 20,
+    String? agent,
   }) async {
     if (_apiClient == null) {
       throw ApiException(message: 'ApiClient 未初始化');
     }
 
-    debugPrint('🤖 [AI] 开始获取对话历史: page=$page, size=$size');
+    debugPrint('🤖 [AI] 开始获取对话历史: page=$page, size=$size, agent=$agent');
 
     try {
+      final queryParams = <String, dynamic>{
+        'page': page,
+        'size': size,
+      };
+      
+      // 如果指定了 agent，添加到查询参数中
+      if (agent != null && agent.isNotEmpty) {
+        queryParams['agent'] = agent;
+      }
+
       final response = await _apiClient!.get(
         '/api/v1/ai/history',
-        queryParameters: {
-          'page': page,
-          'size': size,
-        },
+        queryParameters: queryParams,
         options: Options(
           receiveTimeout: const Duration(seconds: 30),
         ),
@@ -436,6 +450,359 @@ class AiRepository {
     } catch (error) {
       debugPrint('🤖 [AI] ❌ 解析会话记录失败: $error');
       throw ApiException(message: '获取会话记录失败: $error');
+    }
+  }
+
+  /// 查询患者关联项目
+  /// 
+  /// [patientIdentifier] 患者标识（住院号或姓名）
+  /// 返回患者关联的项目列表
+  Future<List<XiaobaiPatientProject>> queryPatientProjects(
+    String patientIdentifier,
+  ) async {
+    if (_apiClient == null) {
+      throw ApiException(message: 'ApiClient 未初始化');
+    }
+
+    debugPrint('🤖 [Xiaobai] 开始查询患者项目: $patientIdentifier');
+
+    try {
+      final response = await _apiClient!.post(
+        '/api/v1/ai/patient-projects',
+        data: {'patientIdentifier': patientIdentifier},
+        options: Options(
+          receiveTimeout: const Duration(seconds: 30),
+        ),
+      );
+
+      final body = response.data;
+      
+      if (body == null) {
+        throw ApiException(message: '查询患者项目失败');
+      }
+
+      debugPrint('🤖 [Xiaobai] 患者项目响应: ${body.keys}');
+
+      // 解析 ApiResponse 包装格式
+      final success = body['success'] as bool? ?? false;
+      final code = body['code'] as String? ?? '';
+      final message = body['message'] as String? ?? '';
+
+      debugPrint('🤖 [Xiaobai] ApiResponse: success=$success, code=$code');
+
+      if (!success) {
+        throw ApiException(
+          message: message.isNotEmpty ? message : '查询患者项目失败',
+          code: code,
+        );
+      }
+
+      // 从 data 字段获取项目列表
+      final dynamic rawData = body['data'];
+      if (rawData == null) {
+        debugPrint('🤖 [Xiaobai] 患者项目数据为空');
+        return [];
+      }
+
+      final List<dynamic> dataList = rawData is List ? rawData : [];
+      
+      final result = dataList
+          .whereType<Map<String, dynamic>>()
+          .map((json) => XiaobaiPatientProject.fromJson(json))
+          .toList();
+
+      debugPrint('🤖 [Xiaobai] ✅ 查询患者项目成功，共 ${result.length} 个项目');
+
+      return result;
+    } on DioException catch (error) {
+      debugPrint('🤖 [Xiaobai] ❌ 查询患者项目失败: ${error.type}');
+      final dynamic responseBody = error.response?.data;
+      String message = '查询患者项目失败';
+      
+      if (responseBody is Map<String, dynamic>) {
+        message = responseBody['message'] as String? ?? message;
+      } else if (error.message != null) {
+        message = error.message!;
+      }
+      
+      throw ApiException(message: message);
+    } on ApiException {
+      rethrow;
+    } catch (error) {
+      debugPrint('🤖 [Xiaobai] ❌ 解析患者项目失败: $error');
+      throw ApiException(message: '查询患者项目失败: $error');
+    }
+  }
+
+  /// 小白Agent问答（非流式）
+  /// 
+  /// [question] 用户问题
+  /// [projectId] 项目ID
+  /// [patientName] 患者标识（可选）
+  /// [sessionId] 会话ID（可选）
+  /// 返回AI回答
+  Future<XiaobaiQueryResponse> askXiaobai({
+    required String question,
+    required int projectId,
+    String? patientName,
+    String? sessionId,
+  }) async {
+    if (_apiClient == null) {
+      throw ApiException(message: 'ApiClient 未初始化');
+    }
+
+    debugPrint('🤖 [Xiaobai] 开始问答');
+    debugPrint('🤖 [Xiaobai] 问题: $question');
+    debugPrint('🤖 [Xiaobai] 项目ID: $projectId');
+    debugPrint('🤖 [Xiaobai] SessionID: ${sessionId ?? "无"}');
+
+    try {
+      final request = XiaobaiQueryRequest(
+        question: question,
+        projectId: projectId,
+        patientName: patientName,
+        sessionId: sessionId,
+      );
+      
+      final startTime = DateTime.now();
+      final response = await _apiClient!.post(
+        '/api/v1/ai/xiaobai/ask',
+        data: request.toJson(),
+        options: Options(
+          sendTimeout: const Duration(seconds: 120),
+          receiveTimeout: const Duration(seconds: 120),
+        ),
+      );
+      final duration = DateTime.now().difference(startTime);
+      
+      debugPrint('🤖 [Xiaobai] 请求完成，耗时: ${duration.inSeconds}秒 (${duration.inMilliseconds}ms)');
+
+      final body = response.data;
+      
+      if (body == null) {
+        throw ApiException(message: '小白Agent未返回数据');
+      }
+
+      // 输出完整的响应 JSON
+      debugPrint('🤖 [Xiaobai] ========== 响应数据开始 ==========');
+      try {
+        final jsonStr = const JsonEncoder.withIndent('  ').convert(body);
+        debugPrint('🤖 [Xiaobai] $jsonStr');
+      } catch (e) {
+        debugPrint('🤖 [Xiaobai] JSON格式化失败: $body');
+      }
+      debugPrint('🤖 [Xiaobai] ========== 响应数据结束 ==========');
+
+      // 解析 ApiResponse 包装格式
+      final success = body['success'] as bool? ?? false;
+      final code = body['code'] as String? ?? '';
+      final message = body['message'] as String? ?? '';
+
+      debugPrint('🤖 [Xiaobai] ApiResponse: success=$success, code=$code');
+
+      if (!success) {
+        throw ApiException(
+          message: message.isNotEmpty ? message : '小白Agent问答失败',
+          code: code,
+        );
+      }
+
+      final data = body['data'] as Map<String, dynamic>?;
+      if (data == null) {
+        throw ApiException(message: '小白Agent返回数据为空');
+      }
+
+      debugPrint('🤖 [Xiaobai] 成功解包 ApiResponse');
+
+      // 解析小白Agent响应
+      final result = XiaobaiQueryResponse.fromJson(data);
+
+      debugPrint('🤖 [Xiaobai] ✅ 问答成功');
+
+      return result;
+    } on DioException catch (error) {
+      debugPrint('🤖 [Xiaobai] ❌ DioException: ${error.type}');
+      debugPrint('🤖 [Xiaobai] ❌ 状态码: ${error.response?.statusCode}');
+      debugPrint('🤖 [Xiaobai] ❌ 错误信息: ${error.message}');
+      
+      final dynamic responseBody = error.response?.data;
+      String message = '小白Agent请求失败';
+      
+      if (responseBody is Map<String, dynamic>) {
+        message = responseBody['message'] as String? ?? message;
+        debugPrint('🤖 [Xiaobai] ❌ 服务器返回: $message');
+      } else if (error.message != null) {
+        message = error.message!;
+      }
+      
+      throw ApiException(message: message);
+    } on ApiException {
+      rethrow;
+    } catch (error) {
+      debugPrint('🤖 [Xiaobai] ❌ 未知错误: $error');
+      throw ApiException(message: '小白Agent问答失败: $error');
+    }
+  }
+
+  /// 获取小白Agent历史会话列表
+  /// 
+  /// [page] 页码（从 1 开始）
+  /// [size] 每页数量
+  Future<PageResponse<XiaobaiSessionModel>> getXiaobaiSessions({
+    int page = 1,
+    int size = 20,
+  }) async {
+    if (_apiClient == null) {
+      throw ApiException(message: 'ApiClient 未初始化');
+    }
+
+    debugPrint('🤖 [Xiaobai] 开始获取会话列表: page=$page, size=$size');
+
+    try {
+      final response = await _apiClient!.get(
+        '/api/v1/ai/xiaobai/sessions',
+        queryParameters: {
+          'page': page,
+          'size': size,
+        },
+        options: Options(
+          receiveTimeout: const Duration(seconds: 30),
+        ),
+      );
+
+      final body = response.data;
+      
+      if (body == null) {
+        throw ApiException(message: '获取会话列表失败');
+      }
+
+      debugPrint('🤖 [Xiaobai] 会话列表响应: ${body.keys}');
+
+      // 解析 ApiResponse 包装格式
+      final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
+        body,
+        dataParser: (rawData) {
+          if (rawData is Map<String, dynamic>) {
+            return rawData;
+          }
+          return <String, dynamic>{};
+        },
+      );
+
+      debugPrint('🤖 [Xiaobai] ApiResponse: success=${apiResponse.success}, code=${apiResponse.code}');
+
+      if (!apiResponse.success) {
+        throw ApiException(
+          message: apiResponse.message.isNotEmpty ? apiResponse.message : '获取会话列表失败',
+          code: apiResponse.code,
+        );
+      }
+
+      final pageData = apiResponse.data;
+      if (pageData == null) {
+        debugPrint('🤖 [Xiaobai] 会话列表数据为空，返回空列表');
+        return PageResponse.empty();
+      }
+
+      debugPrint('🤖 [Xiaobai] 分页数据字段: ${pageData.keys}');
+
+      final result = PageResponse<XiaobaiSessionModel>.fromJson(
+        pageData,
+        (json) => XiaobaiSessionModel.fromJson(json as Map<String, dynamic>),
+      );
+
+      debugPrint('🤖 [Xiaobai] ✅ 获取会话列表成功，共 ${result.data.length} 条记录');
+
+      return result;
+    } on DioException catch (error) {
+      debugPrint('🤖 [Xiaobai] ❌ 获取会话列表失败: ${error.type}');
+      final dynamic responseBody = error.response?.data;
+      String message = '获取会话列表失败';
+      
+      if (responseBody is Map<String, dynamic>) {
+        message = responseBody['message'] as String? ?? message;
+      } else if (error.message != null) {
+        message = error.message!;
+      }
+      
+      throw ApiException(message: message);
+    } on ApiException {
+      rethrow;
+    } catch (error) {
+      debugPrint('🤖 [Xiaobai] ❌ 解析会话列表失败: $error');
+      throw ApiException(message: '获取会话列表失败: $error');
+    }
+  }
+
+  /// 获取小白Agent会话详情
+  /// 
+  /// [sessionId] 会话ID
+  Future<XiaobaiSessionDetailModel> getXiaobaiSessionDetail(String sessionId) async {
+    if (_apiClient == null) {
+      throw ApiException(message: 'ApiClient 未初始化');
+    }
+
+    debugPrint('🤖 [Xiaobai] 开始获取会话详情: sessionId=$sessionId');
+
+    try {
+      final response = await _apiClient!.get(
+        '/api/v1/ai/xiaobai/sessions/$sessionId',
+        options: Options(
+          receiveTimeout: const Duration(seconds: 30),
+        ),
+      );
+
+      final body = response.data;
+      
+      if (body == null) {
+        throw ApiException(message: '获取会话详情失败');
+      }
+
+      debugPrint('🤖 [Xiaobai] 会话详情响应: ${body.keys}');
+
+      // 解析 ApiResponse 包装格式
+      final success = body['success'] as bool? ?? false;
+      final code = body['code'] as String? ?? '';
+      final message = body['message'] as String? ?? '';
+
+      debugPrint('🤖 [Xiaobai] ApiResponse: success=$success, code=$code');
+
+      if (!success) {
+        throw ApiException(
+          message: message.isNotEmpty ? message : '获取会话详情失败',
+          code: code,
+        );
+      }
+
+      // 从 data 字段获取会话详情
+      final dynamic rawData = body['data'];
+      if (rawData == null) {
+        debugPrint('🤖 [Xiaobai] 会话详情数据为空');
+        throw ApiException(message: '会话不存在');
+      }
+
+      final result = XiaobaiSessionDetailModel.fromJson(rawData as Map<String, dynamic>);
+
+      debugPrint('🤖 [Xiaobai] ✅ 获取会话详情成功，共 ${result.messages.length} 条消息');
+
+      return result;
+    } on DioException catch (error) {
+      debugPrint('🤖 [Xiaobai] ❌ 获取会话详情失败: ${error.type}');
+      final dynamic responseBody = error.response?.data;
+      String message = '获取会话详情失败';
+      
+      if (responseBody is Map<String, dynamic>) {
+        message = responseBody['message'] as String? ?? message;
+      } else if (error.message != null) {
+        message = error.message!;
+      }
+      
+      throw ApiException(message: message);
+    } on ApiException {
+      rethrow;
+    } catch (error) {
+      debugPrint('🤖 [Xiaobai] ❌ 解析会话详情失败: $error');
+      throw ApiException(message: '获取会话详情失败: $error');
     }
   }
 }

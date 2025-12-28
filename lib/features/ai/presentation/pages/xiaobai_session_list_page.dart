@@ -2,27 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/ai/data/repositories/ai_repository.dart';
-import 'package:yabai_app/features/ai/presentation/pages/ai_page.dart';
-import 'package:yabai_app/features/ai/presentation/pages/ai_session_detail_page.dart';
-import 'package:yabai_app/features/ai/presentation/widgets/ai_session_card.dart';
-import 'package:yabai_app/features/ai/providers/ai_query_provider.dart';
-import 'package:yabai_app/features/ai/providers/ai_session_list_provider.dart';
+import 'package:yabai_app/features/ai/providers/xiaobai_session_list_provider.dart';
+import 'package:yabai_app/features/ai/providers/xiaobai_chat_provider.dart';
+import 'package:yabai_app/features/ai/presentation/pages/xiaobai_chat_page.dart';
+import 'package:yabai_app/features/ai/presentation/pages/xiaobai_session_detail_page.dart';
+import 'package:yabai_app/features/ai/presentation/widgets/xiaobai_session_card.dart';
 
-class AiSessionListPage extends StatefulWidget {
-  const AiSessionListPage({super.key});
+class XiaobaiSessionListPage extends StatefulWidget {
+  const XiaobaiSessionListPage({super.key});
 
   @override
-  State<AiSessionListPage> createState() => _AiSessionListPageState();
+  State<XiaobaiSessionListPage> createState() => _XiaobaiSessionListPageState();
 }
 
-class _AiSessionListPageState extends State<AiSessionListPage> {
+class _XiaobaiSessionListPageState extends State<XiaobaiSessionListPage> {
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AiSessionListProvider>().loadInitial();
+      context.read<XiaobaiSessionListProvider>().loadInitial();
     });
     _scrollController.addListener(_onScroll);
   }
@@ -36,7 +36,7 @@ class _AiSessionListPageState extends State<AiSessionListPage> {
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      context.read<AiSessionListProvider>().loadMore();
+      context.read<XiaobaiSessionListProvider>().loadMore();
     }
   }
 
@@ -51,7 +51,7 @@ class _AiSessionListPageState extends State<AiSessionListPage> {
           children: [
             _buildHeader(isDark),
             Expanded(
-              child: Consumer<AiSessionListProvider>(
+              child: Consumer<XiaobaiSessionListProvider>(
                 builder: (context, provider, child) {
                   if (provider.isLoading) {
                     return const Center(
@@ -84,7 +84,7 @@ class _AiSessionListPageState extends State<AiSessionListPage> {
                         }
 
                         final session = provider.sessions[index];
-                        return AiSessionCard(
+                        return XiaobaiSessionCard(
                           session: session,
                           onTap: () => _openSessionDetail(context, session.sessionId),
                         );
@@ -97,7 +97,7 @@ class _AiSessionListPageState extends State<AiSessionListPage> {
           ],
         ),
       ),
-      floatingActionButton: _buildNewQueryButton(context),
+      floatingActionButton: _buildNewChatButton(context),
     );
   }
 
@@ -124,7 +124,7 @@ class _AiSessionListPageState extends State<AiSessionListPage> {
                 ),
                 Center(
                   child: Text(
-                    'AI 对话历史',
+                    '临床问答',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -156,7 +156,7 @@ class _AiSessionListPageState extends State<AiSessionListPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            '还没有 AI 对话记录',
+            '还没有临床问答记录',
             style: TextStyle(
               fontSize: 16,
               color: isDark ? AppColors.darkSecondaryText : Colors.grey[600],
@@ -164,7 +164,7 @@ class _AiSessionListPageState extends State<AiSessionListPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            '点击右下角按钮开始新的查询',
+            '点击右下角按钮开始新的问答',
             style: TextStyle(
               fontSize: 14,
               color: isDark ? AppColors.darkSecondaryText : Colors.grey[500],
@@ -197,7 +197,7 @@ class _AiSessionListPageState extends State<AiSessionListPage> {
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              context.read<AiSessionListProvider>().refresh();
+              context.read<XiaobaiSessionListProvider>().refresh();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.brandGreen,
@@ -210,13 +210,13 @@ class _AiSessionListPageState extends State<AiSessionListPage> {
     );
   }
 
-  Widget _buildNewQueryButton(BuildContext context) {
+  Widget _buildNewChatButton(BuildContext context) {
     return FloatingActionButton.extended(
-      onPressed: () => _openNewQuery(context),
+      onPressed: () => _openNewChat(context),
       backgroundColor: AppColors.brandGreen,
       icon: const Icon(Icons.add, color: Colors.white),
       label: const Text(
-        '寻找项目',
+        '新建问答',
         style: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w600,
@@ -225,29 +225,18 @@ class _AiSessionListPageState extends State<AiSessionListPage> {
     );
   }
 
-  void _openNewQuery(BuildContext context) {
+  void _openNewChat(BuildContext context) {
     final repository = context.read<AiRepository>();
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ChangeNotifierProvider(
-          create: (_) => AiQueryProvider(repository),
-          child: Scaffold(
-            backgroundColor: Theme.of(context).brightness == Brightness.dark
-                ? AppColors.darkScaffoldBackground
-                : const Color(0xFFF8F9FA),
-            body: SafeArea(
-              top: false,
-              bottom: false,
-              child: AiPage(
-                onBack: () => Navigator.of(context).pop(),
-              ),
-            ),
-          ),
+          create: (_) => XiaobaiChatProvider(repository),
+          child: const XiaobaiChatPage(),
         ),
       ),
     ).then((_) {
       // 返回后刷新会话列表
-      context.read<AiSessionListProvider>().refresh();
+      context.read<XiaobaiSessionListProvider>().refresh();
     });
   }
 
@@ -255,12 +244,17 @@ class _AiSessionListPageState extends State<AiSessionListPage> {
     final repository = context.read<AiRepository>();
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => Provider<AiRepository>.value(
-          value: repository,
-          child: AiSessionDetailPage(sessionId: sessionId),
+        builder: (_) => MultiProvider(
+          providers: [
+            Provider<AiRepository>.value(value: repository),
+            ChangeNotifierProvider(create: (_) => XiaobaiChatProvider(repository)),
+          ],
+          child: XiaobaiSessionDetailPage(sessionId: sessionId),
         ),
       ),
-    );
+    ).then((_) {
+      // 返回后刷新会话列表
+      context.read<XiaobaiSessionListProvider>().refresh();
+    });
   }
 }
-
