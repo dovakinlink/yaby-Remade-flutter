@@ -285,6 +285,19 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     final project = context.read<ProjectDetailProvider>().project;
     if (project == null) return;
     
+    // 检查项目是否已上传AI知识库
+    if (project.xiaobaiStatus == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('该项目尚未上传AI知识库'),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    
     final repository = context.read<AiRepository>();
     Navigator.of(context).push(
       MaterialPageRoute(

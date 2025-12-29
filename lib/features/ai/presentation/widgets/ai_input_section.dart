@@ -20,17 +20,37 @@ class AiInputSection extends StatefulWidget {
 class _AiInputSectionState extends State<AiInputSection> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController();
+    final provider = context.read<AiQueryProvider>();
+    _controller = TextEditingController(text: provider.inputText);
     _focusNode = FocusNode();
     
     // 监听输入变化并更新 Provider
     _controller.addListener(() {
       context.read<AiQueryProvider>().updateInputText(_controller.text);
     });
+    
+    // 如果已有初始文本，标记为已初始化
+    if (provider.inputText.isNotEmpty) {
+      _isInitialized = true;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 如果Provider中的文本更新了但控制器还没有，同步一次
+    if (!_isInitialized) {
+      final provider = context.read<AiQueryProvider>();
+      if (provider.inputText.isNotEmpty && _controller.text != provider.inputText) {
+        _controller.text = provider.inputText;
+        _isInitialized = true;
+      }
+    }
   }
 
   @override

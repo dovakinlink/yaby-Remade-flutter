@@ -8,6 +8,7 @@ class XiaobaiPatientProject {
     required this.patientNameAbbr,
     required this.statusCode,
     required this.statusText,
+    this.xiaobaiStatus = 0,
   });
 
   final int projectId;
@@ -17,6 +18,7 @@ class XiaobaiPatientProject {
   final String patientNameAbbr;
   final String statusCode;
   final String statusText;
+  final int xiaobaiStatus; // 0: 未上传AI知识库, 1: 已上传
 
   factory XiaobaiPatientProject.fromJson(Map<String, dynamic> json) {
     return XiaobaiPatientProject(
@@ -27,6 +29,7 @@ class XiaobaiPatientProject {
       patientNameAbbr: json['patientNameAbbr'] as String? ?? '',
       statusCode: json['statusCode'] as String? ?? '',
       statusText: json['statusText'] as String? ?? '',
+      xiaobaiStatus: json['xiaobaiStatus'] as int? ?? 0,
     );
   }
 
@@ -39,6 +42,7 @@ class XiaobaiPatientProject {
       'patientNameAbbr': patientNameAbbr,
       'statusCode': statusCode,
       'statusText': statusText,
+      'xiaobaiStatus': xiaobaiStatus,
     };
   }
 }

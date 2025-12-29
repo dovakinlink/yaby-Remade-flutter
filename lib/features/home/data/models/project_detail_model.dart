@@ -19,6 +19,7 @@ class ProjectDetailModel extends ProjectModel {
     required super.customTags,
     required super.createdAt,
     required super.updatedAt,
+    super.xiaobaiStatus,
     this.remark,
     required this.customAttrs,
     required this.criteria,
@@ -50,6 +51,7 @@ class ProjectDetailModel extends ProjectModel {
           [],
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      xiaobaiStatus: json['xiaobaiStatus'] as int? ?? 0,
       remark: json['remark'] as String?,
       customAttrs: (json['customAttrs'] as List<dynamic>?)
               ?.map((e) => ProjectAttrModel.fromJson(e as Map<String, dynamic>))

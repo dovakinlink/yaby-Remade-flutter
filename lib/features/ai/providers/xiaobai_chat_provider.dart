@@ -113,12 +113,19 @@ class XiaobaiChatProvider extends ChangeNotifier {
   }
 
   /// 选择项目
-  void selectProject(XiaobaiPatientProject project) {
+  /// 返回 true 表示选择成功，false 表示项目未上传AI知识库
+  bool selectProject(XiaobaiPatientProject project) {
+    // 检查项目是否已上传AI知识库
+    if (project.xiaobaiStatus == 0) {
+      return false;
+    }
+    
     _selectedProject = project;
     _sessionId = _uuid.v4();
     _messages = [];
     _chatError = null;
     notifyListeners();
+    return true;
   }
 
   /// 发送消息
@@ -222,6 +229,7 @@ class XiaobaiChatProvider extends ChangeNotifier {
       patientNameAbbr: '',
       statusCode: '',
       statusText: '',
+      xiaobaiStatus: 1, // 从历史会话初始化，假设已上传
     );
     
     // 加载历史消息
@@ -255,6 +263,7 @@ class XiaobaiChatProvider extends ChangeNotifier {
       patientNameAbbr: '',
       statusCode: '',
       statusText: '',
+      xiaobaiStatus: 1, // 从项目详情页进入，已通过检查
     );
     
     _messages = [];

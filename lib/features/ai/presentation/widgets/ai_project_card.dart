@@ -31,6 +31,63 @@ class AiProjectCard extends StatelessWidget {
     );
   }
 
+  /// 构建笔记文本，将"结论："部分以绿色显示
+  Widget _buildNoteText(String note, bool isDark) {
+    // 查找"结论："的位置，支持多种格式
+    int conclusionIndex = -1;
+    final patterns = ['结论：', '结论:', '结论： ', '结论: '];
+    
+    for (final pattern in patterns) {
+      final index = note.indexOf(pattern);
+      if (index != -1) {
+        conclusionIndex = index;
+        break;
+      }
+    }
+    
+    if (conclusionIndex == -1) {
+      // 如果没有找到"结论："，直接显示原文本
+      return Text(
+        note,
+        style: TextStyle(
+          fontSize: 14,
+          color: isDark
+              ? AppColors.darkSecondaryText
+              : Colors.grey[700],
+          height: 1.5,
+        ),
+      );
+    }
+
+    // 分割文本：结论之前的部分和结论部分
+    final beforeConclusion = note.substring(0, conclusionIndex);
+    final conclusion = note.substring(conclusionIndex);
+
+    return RichText(
+      text: TextSpan(
+        style: TextStyle(
+          fontSize: 14,
+          color: isDark
+              ? AppColors.darkSecondaryText
+              : Colors.grey[700],
+          height: 1.5,
+        ),
+        children: [
+          // 结论之前的部分
+          TextSpan(text: beforeConclusion),
+          // 结论部分（绿色）
+          TextSpan(
+            text: conclusion,
+            style: TextStyle(
+              color: AppColors.brandGreen,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -91,16 +148,7 @@ class AiProjectCard extends StatelessWidget {
                         : Colors.grey[50],
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(
-                    project.note,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isDark
-                          ? AppColors.darkSecondaryText
-                          : Colors.grey[700],
-                      height: 1.5,
-                    ),
-                  ),
+                  child: _buildNoteText(project.note, isDark),
                 ),
               ],
             ),

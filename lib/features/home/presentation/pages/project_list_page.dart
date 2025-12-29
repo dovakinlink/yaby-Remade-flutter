@@ -7,6 +7,7 @@ import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/home/presentation/widgets/project_card.dart';
 import 'package:yabai_app/features/home/presentation/widgets/project_filter_sheet.dart';
 import 'package:yabai_app/features/home/presentation/widgets/project_search_bar.dart';
+import 'package:yabai_app/features/home/presentation/widgets/ai_search_bar.dart';
 import 'package:yabai_app/features/home/providers/project_list_provider.dart';
 
 class ProjectListPage extends StatefulWidget {
@@ -130,6 +131,11 @@ class _ProjectListPageState extends State<ProjectListPage> {
                   onCancel: () => provider.clearSearch(),
                   isSearchMode: provider.isSearchMode,
                 ),
+              ),
+              
+              // AI搜索框
+              SliverToBoxAdapter(
+                child: AiSearchBar(),
               ),
               
               // 搜索模式提示

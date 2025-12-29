@@ -18,24 +18,12 @@ class AiEntryPage extends StatefulWidget {
 }
 
 class _AiEntryPageState extends State<AiEntryPage> with TickerProviderStateMixin {
-  late AnimationController _floatingController;
   late AnimationController _fadeController;
-  late Animation<double> _floatingAnimation;
   late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
-    
-    // 浮动动画控制器
-    _floatingController = AnimationController(
-      duration: const Duration(seconds: 3),
-      vsync: this,
-    )..repeat(reverse: true);
-    
-    _floatingAnimation = Tween<double>(begin: -10, end: 10).animate(
-      CurvedAnimation(parent: _floatingController, curve: Curves.easeInOut),
-    );
     
     // 淡入动画控制器
     _fadeController = AnimationController(
@@ -52,7 +40,6 @@ class _AiEntryPageState extends State<AiEntryPage> with TickerProviderStateMixin
 
   @override
   void dispose() {
-    _floatingController.dispose();
     _fadeController.dispose();
     super.dispose();
   }
@@ -91,10 +78,6 @@ class _AiEntryPageState extends State<AiEntryPage> with TickerProviderStateMixin
                   children: [
                     const SizedBox(height: 20),
                     _buildModernFeatureCards(context, isDark),
-                    const SizedBox(height: 32),
-                    _buildFeatureHighlights(isDark),
-                    const SizedBox(height: 32),
-                    _buildFloatingRobot(),
                   ],
                 ),
               ),
@@ -223,123 +206,6 @@ class _AiEntryPageState extends State<AiEntryPage> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildFeatureHighlights(bool isDark) {
-    final highlights = [
-      (Icons.flash_on, '快速匹配', '秒级响应，智能推荐'),
-      (Icons.gps_fixed, '精准分析', '深度学习，精确匹配'),
-      (Icons.security, '安全可靠', '数据加密，隐私保护'),
-    ];
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: isDark 
-            ? AppColors.darkCardBackground.withOpacity(0.5)
-            : Colors.white.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark 
-              ? AppColors.darkDividerColor
-              : Colors.grey.withOpacity(0.2),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark 
-                ? Colors.black.withOpacity(0.2)
-                : Colors.grey.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: highlights.asMap().entries.map((entry) {
-          final index = entry.key;
-          final (icon, title, description) = entry.value;
-          return Column(
-            children: [
-              if (index > 0) ...[
-                const SizedBox(height: 20),
-                Divider(
-                  color: isDark 
-                      ? AppColors.darkDividerColor
-                      : Colors.grey.withOpacity(0.2),
-                ),
-                const SizedBox(height: 20),
-              ],
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.brandGreen.withOpacity(0.2),
-                          AppColors.brandGreen.withOpacity(0.1),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      icon,
-                      color: AppColors.brandGreen,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: isDark 
-                                ? AppColors.darkNeutralText
-                                : const Color(0xFF0F172A),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          description,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isDark 
-                                ? AppColors.darkSecondaryText
-                                : const Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildFloatingRobot() {
-    return AnimatedBuilder(
-      animation: _floatingAnimation,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, _floatingAnimation.value),
-          child: Center(
-            child: Image.asset(
-              'assets/images/g10.png',
-              width: 200,
-              fit: BoxFit.contain,
-            ),
-          ),
-        );
-      },
-    );
-  }
 
   void _openAiProjects(BuildContext context) {
     final repository = context.read<AiRepository>();

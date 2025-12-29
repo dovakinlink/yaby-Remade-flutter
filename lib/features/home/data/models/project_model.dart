@@ -13,6 +13,7 @@ class ProjectModel {
     required this.customTags,
     required this.createdAt,
     required this.updatedAt,
+    this.xiaobaiStatus = 0,
   });
 
   final int id;
@@ -28,6 +29,7 @@ class ProjectModel {
   final List<String> customTags;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int xiaobaiStatus; // 0: 未上传AI知识库, 1: 已上传
 
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
     return ProjectModel(
@@ -47,6 +49,7 @@ class ProjectModel {
           [],
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      xiaobaiStatus: json['xiaobaiStatus'] as int? ?? 0,
     );
   }
 

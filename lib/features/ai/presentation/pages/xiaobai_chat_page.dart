@@ -228,7 +228,19 @@ class _XiaobaiChatPageState extends State<XiaobaiChatPage> {
           ...provider.projects.map((project) {
             return XiaobaiProjectCard(
               project: project,
-              onTap: () => provider.selectProject(project),
+              onTap: () {
+                final success = provider.selectProject(project);
+                if (!success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${project.projectName} 尚未上传AI知识库'),
+                      backgroundColor: Colors.orange,
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
             );
           }),
         ],
