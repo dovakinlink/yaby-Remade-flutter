@@ -132,31 +132,37 @@ class _AiSearchBarState extends State<AiSearchBar> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: TextField(
-              controller: _controller,
-              focusNode: _focusNode,
-              onTap: _onTextFieldTap,
-              decoration: InputDecoration(
-                hintText: 'AI 智能匹配项目，例如：食管癌一线有合适的项目吗？',
-                hintStyle: TextStyle(
-                  color: isDark
-                      ? AppColors.darkSecondaryText
-                      : Colors.grey[600],
-                  fontSize: 14,
+            child: SizedBox(
+              height: 44,
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                onTap: _onTextFieldTap,
+                decoration: InputDecoration(
+                  hintText: 'AI 智能匹配项目，例如：食管癌一线有合适的项目吗？',
+                  hintStyle: TextStyle(
+                    color: isDark
+                        ? AppColors.darkSecondaryText
+                        : Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 0,
+                    vertical: 12,
+                  ),
+                  isDense: true,
                 ),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                isDense: true,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? AppColors.darkNeutralText : Colors.black87,
+                ),
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _handleSubmit(),
+                maxLines: 1,
+                keyboardType: TextInputType.text,
+                enableInteractiveSelection: true,
               ),
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark ? AppColors.darkNeutralText : Colors.black87,
-              ),
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _handleSubmit(),
-              maxLines: 1,
-              keyboardType: TextInputType.text,
-              enableInteractiveSelection: true,
             ),
           ),
           const SizedBox(width: 8),

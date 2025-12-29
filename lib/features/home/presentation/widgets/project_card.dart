@@ -57,14 +57,21 @@ class _ProjectCardContent extends StatelessWidget {
                   ),
                   if (project.shortTitle != null) ...[
                     const SizedBox(height: 4),
-                    Text(
-                      project.shortTitle!,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: isDark
-                            ? AppColors.darkSecondaryText
-                            : Colors.grey[600],
-                        fontSize: 13,
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          project.shortTitle!,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: isDark
+                                ? AppColors.darkSecondaryText
+                                : Colors.grey[600],
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildXiaobaiStatus(context, isDark),
+                      ],
                     ),
                   ],
                 ],
@@ -156,6 +163,34 @@ class _ProjectCardContent extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+
+  /// 构建 AI 知识库状态显示
+  Widget _buildXiaobaiStatus(BuildContext context, bool isDark) {
+    final isUploaded = project.xiaobaiStatus == 1;
+    
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: 'AI知识库: ',
+            style: TextStyle(
+              fontSize: 13,
+              color: const Color(0xFFF77924), // 橙色
+            ),
+          ),
+          TextSpan(
+            text: isUploaded ? '已上传' : '未上传',
+            style: TextStyle(
+              fontSize: 13,
+              color: isUploaded 
+                  ? const Color(0xFF10B981) // 绿色（已上传）
+                  : const Color(0xFFEF4444), // 红色（未上传）
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

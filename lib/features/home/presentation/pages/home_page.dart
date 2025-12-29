@@ -20,6 +20,9 @@ import 'package:yabai_app/features/screening/data/repositories/screening_reposit
 import 'package:yabai_app/features/screening/providers/screening_list_provider.dart';
 import 'package:yabai_app/features/screening/presentation/pages/screening_list_page.dart';
 import 'package:yabai_app/features/ai/presentation/pages/ai_entry_page.dart';
+import 'package:yabai_app/features/ai/presentation/pages/xiaobai_chat_page.dart';
+import 'package:yabai_app/features/ai/providers/xiaobai_chat_provider.dart';
+import 'package:yabai_app/features/ai/data/repositories/ai_repository.dart';
 import 'package:yabai_app/features/im/presentation/pages/conversation_list_page.dart';
 import 'package:yabai_app/features/im/providers/websocket_provider.dart';
 import 'package:yabai_app/features/im/providers/unread_count_provider.dart';
@@ -185,6 +188,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     setState(() => _currentTab = index);
   }
 
+  /// 打开试验问答页面
+  void _openXiaobaiChat() {
+    final repository = context.read<AiRepository>();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ChangeNotifierProvider(
+          create: (_) => XiaobaiChatProvider(repository),
+          child: const XiaobaiChatPage(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -196,19 +212,37 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ? AppColors.darkScaffoldBackground
           : const Color(0xFFF8F9FA),
       floatingActionButton: _currentTab == 0
-          ? FloatingActionButton(
-              onPressed: () {
-                context.pushNamed('create-post').then((result) {
-                  // 如果发布成功，刷新列表
-                  if (result == true) {
-                    announcementsProvider.refresh();
-                  }
-                });
-              },
-              backgroundColor: AppColors.brandGreen,
-              child: const Icon(Icons.add, color: Colors.white, size: 28),
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FloatingActionButton(
+                  onPressed: () {
+                    context.pushNamed('create-post').then((result) {
+                      // 如果发布成功，刷新列表
+                      if (result == true) {
+                        announcementsProvider.refresh();
+                      }
+                    });
+                  },
+                  backgroundColor: AppColors.brandGreen,
+                  heroTag: "create_post",
+                  child: const Icon(Icons.add, color: Colors.white, size: 28),
+                ),
+                const SizedBox(height: 16),
+                FloatingActionButton(
+                  onPressed: _openXiaobaiChat,
+                  backgroundColor: AppColors.brandGreen,
+                  heroTag: "clinical_qa",
+                  child: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 28),
+                ),
+              ],
             )
-          : null,
+          : FloatingActionButton(
+              onPressed: _openXiaobaiChat,
+              backgroundColor: AppColors.brandGreen,
+              heroTag: "clinical_qa",
+              child: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 28),
+            ),
       body: _buildTabStack(
         isDark: isDark,
         announcementsProvider: announcementsProvider,
