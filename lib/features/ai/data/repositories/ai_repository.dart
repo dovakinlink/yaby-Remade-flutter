@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:yabai_app/core/config/env_config.dart';
@@ -541,6 +542,117 @@ class AiRepository {
   /// [patientName] 患者标识（可选）
   /// [sessionId] 会话ID（可选）
   /// 返回AI回答
+  /// 小白Agent问答（流式）
+  /// 
+  /// [question] 用户问题
+  /// [projectId] 项目ID
+  /// [patientName] 患者标识（可选）
+  /// [sessionId] 会话ID（可选）
+  /// [onMessage] 收到消息片段的回调
+  /// [onDone] 流式传输完成的回调
+  /// [onError] 发生错误的回调
+  Stream<String> askXiaobaiStream({
+    required String question,
+    required int projectId,
+    String? patientName,
+    String? sessionId,
+  }) async* {
+    if (_apiClient == null) {
+      throw ApiException(message: 'ApiClient 未初始化');
+    }
+
+    debugPrint('🤖 [Xiaobai Stream] 开始流式问答');
+    debugPrint('🤖 [Xiaobai Stream] 问题: $question');
+    debugPrint('🤖 [Xiaobai Stream] 项目ID: $projectId');
+    debugPrint('🤖 [Xiaobai Stream] SessionID: ${sessionId ?? "无"}');
+
+    final request = XiaobaiQueryRequest(
+      question: question,
+      projectId: projectId,
+      patientName: patientName,
+      sessionId: sessionId,
+    );
+
+    try {
+      final response = await _apiClient!.post(
+        '/api/v1/ai/xiaobai/ask-stream',
+        data: request.toJson(),
+        options: Options(
+          responseType: ResponseType.stream,
+          sendTimeout: const Duration(seconds: 120),
+          receiveTimeout: const Duration(seconds: 120),
+          headers: {
+            'Accept': 'text/event-stream',
+          },
+        ),
+      );
+
+      final responseBody = response.data as ResponseBody;
+      final stream = responseBody.stream;
+      String buffer = '';
+
+      await for (final chunk in stream) {
+        final text = utf8.decode(chunk);
+        buffer += text;
+
+        // 按行处理
+        final lines = buffer.split('\n');
+        buffer = lines.last; // 保留最后不完整的行
+
+        for (int i = 0; i < lines.length - 1; i++) {
+          final line = lines[i].trim();
+          if (line.isEmpty) continue;
+
+          // 解析 SSE 格式
+          if (line.startsWith('event: ')) {
+            final eventType = line.substring(7);
+            debugPrint('🤖 [Xiaobai Stream] Event: $eventType');
+            
+            if (eventType == 'done') {
+              debugPrint('🤖 [Xiaobai Stream] ✅ 流式传输完成');
+              return;
+            } else if (eventType == 'error') {
+              debugPrint('🤖 [Xiaobai Stream] ❌ 发生错误');
+            }
+          } else if (line.startsWith('data: ')) {
+            final data = line.substring(6);
+            if (data.isEmpty || data == '{}') continue;
+
+            try {
+              final jsonData = jsonDecode(data) as Map<String, dynamic>;
+              if (jsonData['text'] != null) {
+                final text = jsonData['text'] as String;
+                debugPrint('🤖 [Xiaobai Stream] 收到片段: ${text.length}字');
+                yield text;
+              }
+            } catch (e) {
+              debugPrint('🤖 [Xiaobai Stream] ⚠️ JSON解析失败: $e');
+            }
+          }
+        }
+      }
+
+      debugPrint('🤖 [Xiaobai Stream] ✅ 流式传输正常结束');
+    } on DioException catch (error) {
+      debugPrint('🤖 [Xiaobai Stream] ❌ DioException: ${error.type} - ${error.message}');
+      final dynamic responseBody = error.response?.data;
+      String message = '小白Agent流式请求失败';
+
+      if (responseBody is Map<String, dynamic>) {
+        message = responseBody['message'] as String? ?? message;
+      } else if (error.message != null) {
+        message = error.message!;
+      }
+
+      debugPrint('🤖 [Xiaobai Stream] ❌ 错误信息: $message');
+      throw ApiException(message: message);
+    } catch (error) {
+      debugPrint('🤖 [Xiaobai Stream] ❌ 未知错误: $error');
+      throw ApiException(message: '小白Agent流式请求失败: $error');
+    }
+  }
+
+  /// 小白Agent问答（非流式，保留用于兼容）
   Future<XiaobaiQueryResponse> askXiaobai({
     required String question,
     required int projectId,

@@ -10,11 +10,13 @@ class ChatMessage {
     required this.content,
     required this.isUser,
     required this.timestamp,
+    this.isThinking = false,
   });
 
   final String content;
   final bool isUser;
   final DateTime timestamp;
+  final bool isThinking; // 是否为正在思考状态
 }
 
 /// 小白Agent - 聊天Provider
@@ -150,6 +152,15 @@ class XiaobaiChatProvider extends ChangeNotifier {
       isUser: true,
       timestamp: DateTime.now(),
     ));
+    
+    // 添加"正在思考"的占位消息
+    _messages.add(ChatMessage(
+      content: '',
+      isUser: false,
+      timestamp: DateTime.now(),
+      isThinking: true,
+    ));
+    
     _inputText = '';
     _isSendingMessage = true;
     _chatError = null;
@@ -168,21 +179,35 @@ class XiaobaiChatProvider extends ChangeNotifier {
         sessionId: _sessionId,
       );
 
+      // 移除"正在思考"的占位消息，替换为真实的AI回复
+      if (_messages.isNotEmpty && _messages.last.isThinking) {
+        _messages.removeLast();
+      }
+      
       // 添加AI回复到列表
       _messages.add(ChatMessage(
         content: response.answer,
         isUser: false,
         timestamp: DateTime.now(),
+        isThinking: false,
       ));
       _chatError = null;
     } on ApiException catch (e) {
       _chatError = e.message;
+      // 移除"正在思考"的占位消息
+      if (_messages.isNotEmpty && _messages.last.isThinking) {
+        _messages.removeLast();
+      }
       // 移除失败的用户消息
       if (_messages.isNotEmpty && _messages.last.isUser) {
         _messages.removeLast();
       }
     } catch (e) {
       _chatError = 'AI问答失败: $e';
+      // 移除"正在思考"的占位消息
+      if (_messages.isNotEmpty && _messages.last.isThinking) {
+        _messages.removeLast();
+      }
       // 移除失败的用户消息
       if (_messages.isNotEmpty && _messages.last.isUser) {
         _messages.removeLast();
