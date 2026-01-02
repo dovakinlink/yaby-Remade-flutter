@@ -299,4 +299,3 @@ class XiaobaiChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
-

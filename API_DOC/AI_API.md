@@ -1596,7 +1596,7 @@ Future<XiaobaiSessionDetailVO> getXiaobaiSessionDetail(String sessionId) async {
 
 ## 相关文档
 
-- [AI代理实现文档](./AI_PROXY_IMPLEMENTATION.md)
+- [AI代理实现文档](AI_PROXY_IMPLEMENTATION.md)
 - [YABY Agent Server API文档](./API_DOCS.md) - Python AI服务接口文档
 - [用户认证API](./USER_PROFILE_API.md)
 - [项目搜索API](./PROJECT_SEARCH_API.md)

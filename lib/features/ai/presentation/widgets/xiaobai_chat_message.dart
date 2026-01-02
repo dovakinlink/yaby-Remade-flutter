@@ -103,4 +103,3 @@ class XiaobaiChatMessage extends StatelessWidget {
     );
   }
 }
-

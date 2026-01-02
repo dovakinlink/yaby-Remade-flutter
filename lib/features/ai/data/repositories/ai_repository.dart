@@ -917,5 +917,116 @@ class AiRepository {
       throw ApiException(message: '获取会话详情失败: $error');
     }
   }
+
+  /// AI 项目查询（流式）
+  /// 
+  /// [userInput] 用户输入的查询文本
+  /// [sessionId] 会话 ID（可选）
+  /// 返回一个流，逐步输出 AI 分析的文本片段
+  Stream<String> queryProjectsStream({
+    required String userInput,
+    String? sessionId,
+  }) async* {
+    if (_apiClient == null) {
+      throw ApiException(message: 'ApiClient 未初始化');
+    }
+
+    debugPrint('🤖 [AI Stream] 开始流式查询项目');
+    debugPrint('🤖 [AI Stream] 输入: $userInput');
+    debugPrint('🤖 [AI Stream] SessionID: ${sessionId ?? "无"}');
+
+    // 拼接固定前缀
+    final fullInput = 'orgId:1,disciplineId:2,$userInput';
+    debugPrint('🤖 [AI Stream] 完整输入: $fullInput');
+
+    final requestData = <String, dynamic>{
+      'inputAsText': fullInput,
+    };
+    if (sessionId != null && sessionId.isNotEmpty) {
+      requestData['sessionId'] = sessionId;
+    }
+
+    try {
+      final response = await _apiClient!.post(
+        '/api/v1/ai/query-stream',
+        data: requestData,
+        options: Options(
+          responseType: ResponseType.stream,
+          sendTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 60),
+          headers: {
+            'Accept': 'text/event-stream',
+          },
+        ),
+      );
+
+      final responseBody = response.data as ResponseBody;
+      final stream = responseBody.stream;
+      String buffer = '';
+
+      await for (final chunk in stream) {
+        final text = utf8.decode(chunk);
+        buffer += text;
+
+        // 按行处理
+        final lines = buffer.split('\n');
+        buffer = lines.last; // 保留最后不完整的行
+
+        for (int i = 0; i < lines.length - 1; i++) {
+          final line = lines[i].trim();
+          if (line.isEmpty) continue;
+
+          // 解析 SSE 格式
+          if (line.startsWith('event: ')) {
+            final eventType = line.substring(7);
+            debugPrint('🤖 [AI Stream] Event: $eventType');
+            
+            if (eventType == 'done') {
+              debugPrint('🤖 [AI Stream] ✅ 流式传输完成');
+              return;
+            } else if (eventType == 'error') {
+              debugPrint('🤖 [AI Stream] ❌ 发生错误');
+            }
+          } else if (line.startsWith('data: ')) {
+            final data = line.substring(6);
+            if (data.isEmpty || data == '{}') continue;
+
+            try {
+              final jsonData = jsonDecode(data) as Map<String, dynamic>;
+              if (jsonData['text'] != null) {
+                final textChunk = jsonData['text'] as String;
+                debugPrint('🤖 [AI Stream] 收到片段: ${textChunk.length}字');
+                yield textChunk;
+              }
+            } catch (e) {
+              debugPrint('🤖 [AI Stream] ⚠️ JSON解析失败: $e');
+            }
+          }
+        }
+      }
+
+      debugPrint('🤖 [AI Stream] ✅ 流式传输正常结束');
+    } on DioException catch (error) {
+      debugPrint('🤖 [AI Stream] ❌ DioException: ${error.type} - ${error.message}');
+      final dynamic responseBody = error.response?.data;
+      String message = 'AI流式请求失败';
+
+      if (error.response?.statusCode == 401) {
+        message = '认证失败：JWT Token无效或已过期，请重新登录';
+      } else if (error.response?.statusCode == 403) {
+        message = '权限不足：无权访问该资源';
+      } else if (responseBody is Map<String, dynamic>) {
+        message = responseBody['message'] as String? ?? message;
+      } else if (error.message != null) {
+        message = error.message!;
+      }
+
+      debugPrint('🤖 [AI Stream] ❌ 错误信息: $message');
+      throw ApiException(message: message);
+    } catch (error) {
+      debugPrint('🤖 [AI Stream] ❌ 未知错误: $error');
+      throw ApiException(message: 'AI流式请求失败: $error');
+    }
+  }
 }
 

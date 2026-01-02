@@ -237,8 +237,8 @@ await websocketProvider.connect(
 
 ## 相关文档
 
-- [IM API 文档](./API_DOC/IM_API.md) - 完整的 API 接口说明
-- [Flutter 开发指南](./BUILD_GUIDE.md) - 项目构建说明
+- [IM API 文档](IM_API.md) - 完整的 API 接口说明
+- [Flutter 开发指南](BUILD_GUIDE.md) - 项目构建说明
 
 ## 版本历史
 

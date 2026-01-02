@@ -17,6 +17,8 @@ import 'package:yabai_app/features/profile/providers/my_favorites_provider.dart'
 import 'package:yabai_app/features/profile/providers/my_posts_provider.dart';
 import 'package:yabai_app/features/im/data/local/im_database.dart';
 import 'package:yabai_app/features/im/providers/websocket_provider.dart';
+import 'package:yabai_app/features/app_update/data/services/app_update_service.dart';
+import 'package:yabai_app/features/app_update/presentation/widgets/app_update_dialog.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -33,6 +35,7 @@ class _ProfilePageState extends State<ProfilePage>
   late TabController _tabController;
   late ScrollController _scrollController;
   bool _isLoggingOut = false;
+  bool _isCheckingUpdate = false;
 
   @override
   void initState() {
@@ -365,6 +368,17 @@ class _ProfilePageState extends State<ProfilePage>
         ),
         const SizedBox(height: 16),
         _buildSettingsItem(
+          icon: Icons.system_update_rounded,
+          iconColor: AppColors.brandGreen,
+          iconBackground: AppColors.brandGreen.withValues(alpha: 0.12),
+          title: '版本检测',
+          subtitle: '检查是否有新版本可用',
+          onTap: _checkAppUpdate,
+          isDark: isDark,
+          showLoader: _isCheckingUpdate,
+        ),
+        const SizedBox(height: 16),
+        _buildSettingsItem(
           icon: Icons.logout_rounded,
           iconColor: Colors.redAccent,
           iconBackground: Colors.redAccent.withValues(alpha: 0.12),
@@ -471,6 +485,56 @@ class _ProfilePageState extends State<ProfilePage>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('密码修改成功')),
       );
+    }
+  }
+
+  /// 检测应用版本更新
+  Future<void> _checkAppUpdate() async {
+    if (_isCheckingUpdate) return;
+
+    setState(() {
+      _isCheckingUpdate = true;
+    });
+
+    try {
+      final apiClient = context.read<ApiClient>();
+      final updateService = AppUpdateService(apiClient);
+      final updateInfo = await updateService.checkUpdate();
+
+      if (!mounted) return;
+
+      debugPrint('📦 [ProfilePage] 更新检测结果: updateInfo=${updateInfo != null}, hasUpdate=${updateInfo?.hasUpdate}');
+
+      if (updateInfo != null && updateInfo.hasUpdate) {
+        // 有更新，显示更新对话框
+        debugPrint('📦 [ProfilePage] 显示更新对话框');
+        await AppUpdateDialog.show(context, updateInfo);
+      } else if (updateInfo != null && !updateInfo.hasUpdate) {
+        // 明确无更新（检测成功但无新版本），显示提示
+        debugPrint('📦 [ProfilePage] 当前已是最新版本');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('当前已是最新版本'),
+              backgroundColor: AppColors.brandGreen,
+            ),
+          );
+        }
+      } else {
+        // updateInfo 为 null（网络错误、服务不可用等），静默处理
+        debugPrint('📦 [ProfilePage] 更新检测失败（网络错误或服务不可用），静默处理');
+      }
+    } catch (e, stackTrace) {
+      // 输出控制台日志，但不显示界面错误提示
+      debugPrint('📦 [ProfilePage] 检测更新异常: $e');
+      debugPrint('📦 [ProfilePage] 堆栈: $stackTrace');
+      // 静默处理，不在界面显示错误提示
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCheckingUpdate = false;
+        });
+      }
     }
   }
 

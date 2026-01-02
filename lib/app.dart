@@ -13,6 +13,8 @@ import 'package:yabai_app/features/auth/providers/auth_session_provider.dart';
 import 'package:yabai_app/features/auth/providers/login_form_provider.dart';
 import 'package:yabai_app/features/auth/providers/user_profile_provider.dart';
 import 'package:yabai_app/features/auth/presentation/pages/login_page.dart';
+import 'package:yabai_app/features/app_update/data/services/app_update_service.dart';
+import 'package:yabai_app/features/app_update/presentation/widgets/app_update_dialog.dart';
 import 'package:yabai_app/features/home/data/models/announcement_model.dart';
 import 'package:yabai_app/features/home/data/repositories/announcement_repository.dart';
 import 'package:yabai_app/features/home/data/repositories/comment_repository.dart';
@@ -823,6 +825,9 @@ class _AppInitializerState extends State<_AppInitializer> {
         debugPrint('启动时加载用户信息失败: $e');
       });
       widget.router.go(HomePage.routePath);
+      
+      // 登录成功后检测版本更新
+      _checkAppUpdate();
       return;
     }
 
@@ -844,6 +849,9 @@ class _AppInitializerState extends State<_AppInitializer> {
         }
 
         widget.router.go(HomePage.routePath);
+        
+        // 登录成功后检测版本更新
+        _checkAppUpdate();
         return;
       } on AuthException catch (error) {
         debugPrint('启动时刷新令牌失败: ${error.message}');
@@ -852,6 +860,41 @@ class _AppInitializerState extends State<_AppInitializer> {
       }
 
       await authSession.clear();
+    }
+  }
+
+  /// 检测应用版本更新
+  Future<void> _checkAppUpdate() async {
+    // 延迟一帧，确保页面已构建完成
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (!mounted) return;
+
+    try {
+      final apiClient = context.read<ApiClient>();
+      final updateService = AppUpdateService(apiClient);
+      final updateInfo = await updateService.checkUpdate();
+
+      if (!mounted) return;
+
+      debugPrint('📦 [AppInitializer] 启动时更新检测结果: updateInfo=${updateInfo != null}, hasUpdate=${updateInfo?.hasUpdate}');
+
+      // 如果有更新，显示更新对话框
+      if (updateInfo != null && updateInfo.hasUpdate) {
+        debugPrint('📦 [AppInitializer] 显示更新对话框');
+        final navigatorContext = widget.router.routerDelegate.navigatorKey.currentContext;
+        if (navigatorContext != null && navigatorContext.mounted) {
+          await AppUpdateDialog.show(navigatorContext, updateInfo);
+        }
+      } else {
+        debugPrint('📦 [AppInitializer] 无更新或检测失败（网络错误/服务不可用），静默处理');
+      }
+      // 如果检测失败（网络错误、服务不可用等），静默处理，不在界面显示任何错误
+    } catch (e, stackTrace) {
+      // 输出控制台日志，但不显示界面错误提示
+      debugPrint('📦 [AppInitializer] 启动时检测更新异常: $e');
+      debugPrint('📦 [AppInitializer] 堆栈: $stackTrace');
+      // 静默处理，不在界面显示错误
     }
   }
 
