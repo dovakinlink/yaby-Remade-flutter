@@ -5,6 +5,7 @@ class XiaobaiSessionDetailModel {
     required this.title,
     this.projectId,
     this.projectName,
+    this.projectShortName,
     required this.messages,
   });
 
@@ -12,6 +13,7 @@ class XiaobaiSessionDetailModel {
   final String title;
   final int? projectId;
   final String? projectName;
+  final String? projectShortName;
   final List<XiaobaiChatLogModel> messages;
 
   factory XiaobaiSessionDetailModel.fromJson(Map<String, dynamic> json) {
@@ -21,6 +23,7 @@ class XiaobaiSessionDetailModel {
       title: json['title'] as String? ?? '',
       projectId: json['projectId'] as int?,
       projectName: json['projectName'] as String?,
+      projectShortName: json['projectShortName'] as String?,
       messages: messagesList
           .map((e) => XiaobaiChatLogModel.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -33,6 +36,7 @@ class XiaobaiSessionDetailModel {
       'title': title,
       'projectId': projectId,
       'projectName': projectName,
+      'projectShortName': projectShortName,
       'messages': messages.map((e) => e.toJson()).toList(),
     };
   }

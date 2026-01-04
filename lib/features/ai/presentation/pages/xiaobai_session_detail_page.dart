@@ -78,7 +78,7 @@ class _XiaobaiSessionDetailPageState extends State<XiaobaiSessionDetailPage> {
         context.read<XiaobaiChatProvider>().initFromSession(
           sessionId: detail.sessionId,
           projectId: detail.projectId ?? 0,
-          projectShortTitle: detail.projectName ?? detail.title,
+          projectShortTitle: detail.projectShortName ?? detail.projectName ?? detail.title,
           historyMessages: historyMessages,
         );
       }
