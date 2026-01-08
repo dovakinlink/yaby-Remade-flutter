@@ -11,6 +11,7 @@ import 'package:yabai_app/features/home/presentation/widgets/feed_card.dart';
 import 'package:yabai_app/features/home/presentation/widgets/home_bottom_nav.dart';
 import 'package:yabai_app/features/home/presentation/widgets/home_header.dart';
 import 'package:yabai_app/features/home/presentation/widgets/search_stats_card.dart';
+import 'package:yabai_app/features/home/presentation/widgets/personnel_stats_chart.dart';
 import 'package:yabai_app/features/home/presentation/widgets/notice_tag_filter.dart';
 import 'package:yabai_app/features/home/providers/home_announcements_provider.dart';
 import 'package:yabai_app/features/home/providers/project_statistics_provider.dart';
@@ -334,6 +335,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
             SliverToBoxAdapter(
               child: _buildQuickActionsRow(isDark),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            const SliverToBoxAdapter(
+              child: PersonnelStatsChart(),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ..._buildTagFilterSlivers(announcementsProvider),
