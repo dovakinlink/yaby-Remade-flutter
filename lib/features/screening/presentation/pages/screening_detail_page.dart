@@ -580,7 +580,7 @@ class _ScreeningDetailPageState extends State<ScreeningDetailPage> {
                     ),
                   )
                 : Text(
-                    _getActionText(action),
+                    _getActionText(action, currentStatus: provider.detail?.statusCode),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -602,7 +602,9 @@ class _ScreeningDetailPageState extends State<ScreeningDetailPage> {
         await _showConfirmDialog(context, provider, action, '开始审核');
         break;
       case 'MATCH_FAILED':
-        await _showRemarkDialog(context, provider, action, '标记筛查失败');
+        // PENDING 状态下显示"审核不通过"，其他状态显示"标记筛查失败"
+        final title = provider.detail?.statusCode == 'PENDING' ? '审核不通过' : '标记筛查失败';
+        await _showRemarkDialog(context, provider, action, title);
         break;
       case 'ICF_FAILED':
         await _showRemarkDialog(context, provider, action, '标记知情失败');
@@ -740,7 +742,11 @@ class _ScreeningDetailPageState extends State<ScreeningDetailPage> {
     return statusMap[statusCode] ?? statusCode;
   }
 
-  String _getActionText(String action) {
+  String _getActionText(String action, {String? currentStatus}) {
+    // PENDING 状态下的 MATCH_FAILED 显示为"审核不通过"
+    if (action == 'MATCH_FAILED' && currentStatus == 'PENDING') {
+      return '审核不通过';
+    }
     const actionMap = {
       'CRC_REVIEW': '开始审核',
       'MATCH_FAILED': '标记筛查失败',

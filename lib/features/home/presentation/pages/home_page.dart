@@ -11,7 +11,6 @@ import 'package:yabai_app/features/home/presentation/widgets/feed_card.dart';
 import 'package:yabai_app/features/home/presentation/widgets/home_bottom_nav.dart';
 import 'package:yabai_app/features/home/presentation/widgets/home_header.dart';
 import 'package:yabai_app/features/home/presentation/widgets/search_stats_card.dart';
-import 'package:yabai_app/features/home/presentation/widgets/personnel_stats_chart.dart';
 import 'package:yabai_app/features/home/presentation/widgets/notice_tag_filter.dart';
 import 'package:yabai_app/features/home/providers/home_announcements_provider.dart';
 import 'package:yabai_app/features/home/providers/project_statistics_provider.dart';
@@ -217,17 +216,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               mainAxisSize: MainAxisSize.min,
               children: [
                 FloatingActionButton(
-                  onPressed: () {
-                    context.pushNamed('create-post').then((result) {
-                      // 如果发布成功，刷新列表
-                      if (result == true) {
-                        announcementsProvider.refresh();
-                      }
-                    });
-                  },
-                  backgroundColor: AppColors.brandGreen,
+              onPressed: () {
+                context.pushNamed('create-post').then((result) {
+                  // 如果发布成功，刷新列表
+                  if (result == true) {
+                    announcementsProvider.refresh();
+                  }
+                });
+              },
+              backgroundColor: AppColors.brandGreen,
                   heroTag: "create_post",
-                  child: const Icon(Icons.add, color: Colors.white, size: 28),
+              child: const Icon(Icons.add, color: Colors.white, size: 28),
                 ),
                 const SizedBox(height: 16),
                 FloatingActionButton(
@@ -337,10 +336,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               child: _buildQuickActionsRow(isDark),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
-            const SliverToBoxAdapter(
-              child: PersonnelStatsChart(),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ..._buildTagFilterSlivers(announcementsProvider),
             ..._buildFeedSlivers(announcementsProvider),
             SliverToBoxAdapter(
@@ -432,7 +427,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       },
       {
         'label': '学习中心',
-        'asset': 'assets/images/Image.svg',
+        'asset': 'assets/icons/study_center.svg',
         'isSvg': true,
       },
     ];

@@ -155,7 +155,7 @@ class ScreeningDetailProvider extends ChangeNotifier {
 
     switch (_detail!.statusCode) {
       case 'PENDING':
-        return ['CRC_REVIEW'];
+        return ['CRC_REVIEW', 'MATCH_FAILED']; // 增加 MATCH_FAILED（审核不通过）
       case 'CRC_REVIEW':
         return ['MATCH_FAILED', 'ICF_FAILED', 'ICF_SIGNED'];
       case 'ICF_SIGNED':

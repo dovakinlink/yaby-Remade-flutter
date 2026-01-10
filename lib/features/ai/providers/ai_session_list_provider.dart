@@ -22,6 +22,27 @@ class AiSessionListProvider extends ChangeNotifier {
   bool get hasMore => _hasMore;
   bool get hasSessions => _sessions.isNotEmpty;
 
+  /// 按 session_id 聚合数据，每个 session_id 只保留最新的一条记录
+  List<AiSessionModel> _aggregateBySessionId(List<AiSessionModel> rawData) {
+    final Map<String, AiSessionModel> sessionMap = {};
+    
+    for (final session in rawData) {
+      final existingSession = sessionMap[session.sessionId];
+      
+      // 如果该 session_id 还没有记录，或者当前记录更新，则保留当前记录
+      if (existingSession == null || 
+          session.lastUpdated.isAfter(existingSession.lastUpdated)) {
+        sessionMap[session.sessionId] = session;
+      }
+    }
+    
+    // 按最后更新时间降序排序
+    final aggregatedList = sessionMap.values.toList()
+      ..sort((a, b) => b.lastUpdated.compareTo(a.lastUpdated));
+    
+    return aggregatedList;
+  }
+
   /// 加载初始数据
   Future<void> loadInitial() async {
     if (_isLoading) return;
@@ -38,8 +59,8 @@ class AiSessionListProvider extends ChangeNotifier {
         size: 20,
         agent: 'xiaoya', // 找项目的AI历史会话需要传入agent=xiaoya
       );
-      // 创建新的可增长列表，避免固定长度列表问题
-      _sessions = List<AiSessionModel>.from(pageResponse.data);
+      // 按 session_id 聚合数据，避免重复
+      _sessions = _aggregateBySessionId(pageResponse.data);
       _hasMore = pageResponse.data.length >= 20;
       _errorMessage = null;
     } on ApiException catch (e) {
@@ -73,7 +94,9 @@ class AiSessionListProvider extends ChangeNotifier {
       if (pageResponse.data.isEmpty) {
         _hasMore = false;
       } else {
-        _sessions.addAll(pageResponse.data);
+        // 合并现有数据和新数据，然后按 session_id 聚合
+        final allData = [..._sessions, ...pageResponse.data];
+        _sessions = _aggregateBySessionId(allData);
         _currentPage = nextPage;
         _hasMore = pageResponse.data.length >= 20;
       }

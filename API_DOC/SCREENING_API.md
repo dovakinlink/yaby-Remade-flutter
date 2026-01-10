@@ -30,25 +30,30 @@
     ↓
 PENDING（待CRC审核）        ← 全部入排条件匹配
     ↓
-CRC_REVIEW（CRC审核中）
-    ↓
-    ├→ MATCH_FAILED（筛查失败）  ← 有入排条件不匹配
-    ├→ ICF_FAILED（知情失败）    ← 患者拒绝知情同意
-    └→ ICF_SIGNED（已知情）       ← 患者同意并签署知情同意书
+    ├→ MATCH_FAILED（筛查失败）  ← CRC拒绝筛查
+    └→ CRC_REVIEW（CRC审核中）   ← CRC审核通过
         ↓
-    ENROLLED（已入组）            ← 提交入组信息
-        ↓
-    EXITED（已出组）              ← 临床试验结束
+        ├→ ICF_FAILED（知情失败）    ← 患者拒绝知情同意
+        └→ ICF_SIGNED（已知情）       ← 患者同意并签署知情同意书
+            ↓
+        ENROLLED（已入组）            ← 提交入组信息
+            ↓
+        EXITED（已出组）              ← 临床试验结束
 ```
 
 **状态说明**：
 - `PENDING`: 医生提交初筛，等待CRC审核
 - `CRC_REVIEW`: CRC正在审核中
-- `MATCH_FAILED`: 筛查失败，不符合入排条件
+- `MATCH_FAILED`: 筛查失败，不符合入排条件或CRC拒绝
 - `ICF_SIGNED`: 已知情，患者已签署知情同意书
 - `ICF_FAILED`: 知情失败，患者拒绝参与
 - `ENROLLED`: 已入组，正式开始临床试验
 - `EXITED`: 已出组，完成或退出临床试验
+
+**审核权限规则**：
+- 当筛查状态为`PENDING`时，只有该项目的CRC才能进行审核操作（通过或拒绝）
+- 发起筛查的医生不能自己审核通过自己发起的筛查请求
+- CRC可以拒绝筛查请求，状态变更为`MATCH_FAILED`
 
 ---
 
@@ -452,6 +457,19 @@ Future<PageResponse<Screening>> getAllScreenings({
 - **方法**: `PUT`
 - **认证**: 需要认证（Bearer Token）
 
+#### 权限校验规则
+
+当筛查状态为`PENDING`（待审核）时：
+- **审核通过**（状态变更为`CRC_REVIEW`等非`MATCH_FAILED`状态）：只有该项目的CRC才能操作，且发起人不能自己审核通过
+- **拒绝**（状态变更为`MATCH_FAILED`）：CRC可以执行拒绝操作
+
+| 当前状态 | 目标状态 | 权限要求 |
+|---------|---------|---------|
+| PENDING | MATCH_FAILED | CRC可以拒绝 |
+| PENDING | CRC_REVIEW | 必须是项目CRC，且不能是发起人 |
+| PENDING | 其他状态 | 必须是项目CRC，且不能是发起人 |
+| 其他状态 | 任意状态 | 保持现有逻辑 |
+
 #### 请求参数
 
 ```json
@@ -469,6 +487,15 @@ Future<PageResponse<Screening>> getAllScreenings({
 | failReasonDictId | Long | 否 | 失败原因字典ID（状态为失败时填写） |
 | failRemark | String | 否 | 失败备注，最大500字符 |
 
+**拒绝筛查请求示例**：
+```json
+{
+  "status": "MATCH_FAILED",
+  "failReasonDictId": 101,
+  "failRemark": "患者不符合入组条件"
+}
+```
+
 #### 响应示例
 
 **成功响应 (200)**:
@@ -481,7 +508,27 @@ Future<PageResponse<Screening>> getAllScreenings({
 }
 ```
 
-**失败响应 (200)**:
+**失败响应 - 无权限 (200)**:
+```json
+{
+  "success": false,
+  "code": "FORBIDDEN",
+  "message": "只有项目CRC才能审核通过",
+  "data": null
+}
+```
+
+**失败响应 - 不能自审 (200)**:
+```json
+{
+  "success": false,
+  "code": "FORBIDDEN",
+  "message": "不能审核自己发起的筛查请求",
+  "data": null
+}
+```
+
+**失败响应 - 状态不允许 (200)**:
 ```json
 {
   "success": false,
