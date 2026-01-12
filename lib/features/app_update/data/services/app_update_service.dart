@@ -81,9 +81,13 @@ class AppUpdateService {
 
       final result = AppUpdateCheckVO.fromJson(resultData as Map<String, dynamic>);
       debugPrint('📦 [AppUpdate] 解析结果: hasUpdate=${result.hasUpdate}, force=${result.force}');
+      debugPrint('📦 [AppUpdate] downloadUrl: ${result.downloadUrl}');
+      debugPrint('📦 [AppUpdate] storeUrl: ${result.storeUrl}');
       
       if (result.hasUpdate) {
         debugPrint('📦 [AppUpdate] 检测到更新: ${result.latestVersionName} (${result.latestBuildNumber})');
+        debugPrint('📦 [AppUpdate] 文件大小: ${result.fileSize} bytes (${result.fileSizeFormatted})');
+        debugPrint('📦 [AppUpdate] SHA256: ${result.fileSha256}');
       } else {
         debugPrint('📦 [AppUpdate] 当前已是最新版本');
       }

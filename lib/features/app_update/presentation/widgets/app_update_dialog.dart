@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
@@ -238,16 +239,24 @@ class AppUpdateDialog extends StatelessWidget {
   Future<void> _handleUpdate(BuildContext context) async {
     String? urlToOpen;
 
+    debugPrint('🔄 [AppUpdate] 处理更新点击');
+    debugPrint('🔄 [AppUpdate] Platform.isAndroid: ${Platform.isAndroid}');
+    debugPrint('🔄 [AppUpdate] downloadUrl: ${updateInfo.downloadUrl}');
+    debugPrint('🔄 [AppUpdate] storeUrl: ${updateInfo.storeUrl}');
+
     // Android 优先使用直接下载链接
     if (Platform.isAndroid && 
         updateInfo.downloadUrl != null && 
         updateInfo.downloadUrl!.isNotEmpty) {
       urlToOpen = updateInfo.downloadUrl;
+      debugPrint('🔄 [AppUpdate] 使用 downloadUrl: $urlToOpen');
     } else if (updateInfo.storeUrl != null && updateInfo.storeUrl!.isNotEmpty) {
       urlToOpen = updateInfo.storeUrl;
+      debugPrint('🔄 [AppUpdate] 使用 storeUrl: $urlToOpen');
     }
 
     if (urlToOpen == null || urlToOpen.isEmpty) {
+      debugPrint('❌ [AppUpdate] 无可用的更新链接');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -260,28 +269,47 @@ class AppUpdateDialog extends StatelessWidget {
     }
 
     try {
+      debugPrint('🔄 [AppUpdate] 尝试打开链接: $urlToOpen');
       final uri = Uri.parse(urlToOpen);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(
+      debugPrint('🔄 [AppUpdate] URI解析成功: $uri');
+      debugPrint('🔄 [AppUpdate] URI scheme: ${uri.scheme}');
+      debugPrint('🔄 [AppUpdate] URI host: ${uri.host}');
+      
+      final canLaunch = await canLaunchUrl(uri);
+      debugPrint('🔄 [AppUpdate] canLaunchUrl 结果: $canLaunch');
+      
+      if (canLaunch) {
+        debugPrint('🔄 [AppUpdate] 正在启动外部应用打开链接...');
+        final launched = await launchUrl(
           uri,
           mode: LaunchMode.externalApplication,
         );
+        debugPrint('🔄 [AppUpdate] launchUrl 结果: $launched');
+        
+        if (!launched) {
+          throw Exception('launchUrl 返回 false');
+        }
       } else {
+        debugPrint('❌ [AppUpdate] canLaunchUrl 返回 false');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('无法打开更新链接'),
+            SnackBar(
+              content: Text('无法打开更新链接\n链接: $urlToOpen'),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
             ),
           );
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('❌ [AppUpdate] 打开链接失败: $e');
+      debugPrint('❌ [AppUpdate] 堆栈跟踪: $stackTrace');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('打开链接失败: $e'),
+            content: Text('打开链接失败: $e\n链接: $urlToOpen'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
