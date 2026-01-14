@@ -124,10 +124,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       final uri = Uri.parse(baseUrl);
       final host = uri.host;
       final port = uri.port;
+      // 根据 baseUrl 的 scheme 判断是否使用安全连接（HTTPS -> WSS）
+      final useSecure = uri.scheme == 'https';
       
-      debugPrint('WebSocket: 首页自动连接 - host: $host, port: $port');
+      debugPrint('WebSocket: 首页自动连接 - host: $host, port: $port, useSecure: $useSecure');
       
-      websocketProvider.connect(host, port, tokens.accessToken).catchError((e) {
+      websocketProvider.connect(host, port, tokens.accessToken, useSecure: useSecure).catchError((e) {
         debugPrint('WebSocket: 自动连接失败 - $e');
       });
     } catch (e) {

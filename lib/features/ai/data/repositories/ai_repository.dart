@@ -49,11 +49,7 @@ class AiRepository {
     debugPrint('🤖 [AI] 输入: $userInput');
     
     try {
-      // 拼接固定前缀
-      final fullInput = 'orgId:1,disciplineId:2,$userInput';
-      debugPrint('🤖 [AI] 完整输入: $fullInput');
-      
-      final request = AiQueryRequest(inputAsText: fullInput);
+      final request = AiQueryRequest(inputAsText: userInput);
       
       final startTime = DateTime.now();
       final response = await _dio.post<Map<String, dynamic>>(
@@ -143,12 +139,8 @@ class AiRepository {
     debugPrint('🤖 [AI] SessionID: ${sessionId ?? "无"}');
 
     try {
-      // 拼接固定前缀
-      final fullInput = 'orgId:1,disciplineId:2,$userInput';
-      debugPrint('🤖 [AI] 完整输入: $fullInput');
-      
       final request = AiQueryRequestV2(
-        inputAsText: fullInput,
+        inputAsText: userInput,
         sessionId: sessionId,
       );
       
@@ -935,12 +927,8 @@ class AiRepository {
     debugPrint('🤖 [AI Stream] 输入: $userInput');
     debugPrint('🤖 [AI Stream] SessionID: ${sessionId ?? "无"}');
 
-    // 拼接固定前缀
-    final fullInput = 'orgId:1,disciplineId:2,$userInput';
-    debugPrint('🤖 [AI Stream] 完整输入: $fullInput');
-
     final requestData = <String, dynamic>{
-      'inputAsText': fullInput,
+      'inputAsText': userInput,
     };
     if (sessionId != null && sessionId.isNotEmpty) {
       requestData['sessionId'] = sessionId;

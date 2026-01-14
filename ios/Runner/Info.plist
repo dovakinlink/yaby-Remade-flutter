@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>小研</string>
+	<string>友研</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

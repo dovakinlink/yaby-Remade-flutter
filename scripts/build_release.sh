@@ -8,9 +8,9 @@
 #        ./scripts/build_release.sh https://api.example.com:8090 https://ai.example.com:8200
 
 # 生产环境API地址（可以通过命令行参数传入）
-PROD_API="${1:-https://api.yabai.com}"
-# AI 服务地址（第二个参数；未传时使用默认 localhost:8200）
-AI_HOST="${2:-http://localhost:8200}"
+PROD_API="${1:-https://app.youyanonline.com}"
+# AI 服务地址（第二个参数；未传时使用默认 mcp.youyanmcp.app）
+AI_HOST="${2:-http://97.64.24.61:8200}"
 
 echo "================================"
 echo "   崖柏应用打包脚本"

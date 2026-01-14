@@ -121,13 +121,14 @@ class WebSocketProvider extends ChangeNotifier {
   }
 
   /// 连接 WebSocket
-  Future<void> connect(String host, int port, String token) async {
+  /// [useSecure] 是否使用安全连接（wss://），HTTPS 环境应设为 true
+  Future<void> connect(String host, int port, String token, {bool useSecure = false}) async {
     // 创建 token 获取回调，用于重连时刷新 token
     Future<String> tokenGetter() async {
       return await _getValidToken();
     }
     
-    await _websocketService.connect(host, port, token, tokenGetter: tokenGetter);
+    await _websocketService.connect(host, port, token, tokenGetter: tokenGetter, useSecure: useSecure);
   }
 
   /// 获取有效的 token（如果过期则刷新）
@@ -270,8 +271,10 @@ class WebSocketProvider extends ChangeNotifier {
       final uri = Uri.parse(baseUrl);
       final host = uri.host;
       final port = uri.port;
+      // 根据 baseUrl 的 scheme 判断是否使用安全连接
+      final useSecure = uri.scheme == 'https';
 
-      await connect(host, port, token);
+      await connect(host, port, token, useSecure: useSecure);
     } catch (e) {
       rethrow;
     }

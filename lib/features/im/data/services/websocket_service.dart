@@ -68,11 +68,18 @@ class WebSocketService {
   
   /// 获取是否主动断开
   bool get isManualDisconnect => _manualDisconnect;
+  
+  /// 是否使用安全连接（wss://）
+  bool _useSecure = false;
 
   WebSocketService();
 
   /// 连接 WebSocket
-  Future<void> connect(String host, int port, String token, {Future<String> Function()? tokenGetter}) async {
+  /// [useSecure] 是否使用安全连接（wss://），HTTPS 环境应设为 true
+  Future<void> connect(String host, int port, String token, {
+    Future<String> Function()? tokenGetter,
+    bool useSecure = false,
+  }) async {
     if (_state == WebSocketState.connected ||
         _state == WebSocketState.connecting) {
       return;
@@ -80,7 +87,10 @@ class WebSocketService {
 
     _host = host;
     _port = port;
-    _baseWsUrl = 'ws://$host:$port/im/ws';
+    _useSecure = useSecure;
+    // 根据 useSecure 决定使用 ws:// 还是 wss://
+    final wsScheme = useSecure ? 'wss' : 'ws';
+    _baseWsUrl = '$wsScheme://$host:$port/im/ws';
     _tokenGetter = tokenGetter;
     _manualDisconnect = false;
 

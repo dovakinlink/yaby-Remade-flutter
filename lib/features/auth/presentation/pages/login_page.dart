@@ -38,11 +38,13 @@ class _LoginPageState extends State<LoginPage> {
       final uri = Uri.parse(baseUrl);
       final host = uri.host;
       final port = uri.port;
+      // 根据 baseUrl 的 scheme 判断是否使用安全连接（HTTPS -> WSS）
+      final useSecure = uri.scheme == 'https';
       
-      debugPrint('WebSocket: 开始连接 - host: $host, port: $port');
+      debugPrint('WebSocket: 开始连接 - host: $host, port: $port, useSecure: $useSecure');
       
       // 连接 WebSocket（不等待，异步连接）
-      websocketProvider.connect(host, port, accessToken).catchError((e) {
+      websocketProvider.connect(host, port, accessToken, useSecure: useSecure).catchError((e) {
         debugPrint('WebSocket: 连接失败 - $e');
       });
     } catch (e) {
