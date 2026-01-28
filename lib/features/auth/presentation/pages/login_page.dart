@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/core/config/env_config.dart';
+import 'package:yabai_app/core/constants/legal_urls.dart';
 import 'package:yabai_app/features/auth/data/models/auth_exception.dart';
 import 'package:yabai_app/features/auth/data/repositories/auth_repository.dart';
 import 'package:yabai_app/features/auth/providers/auth_session_provider.dart';
@@ -27,6 +29,25 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
+  
+  // 协议勾选状态
+  bool _agreedPrivacyPolicy = false;
+  bool _agreedUserAgreement = false;
+
+  /// 打开URL
+  Future<void> _openUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('打开URL失败: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('无法打开链接')),
+        );
+      }
+    }
+  }
 
   /// 连接 WebSocket
   Future<void> _connectWebSocket(BuildContext context, String accessToken) async {
@@ -178,7 +199,31 @@ class _LoginPageState extends State<LoginPage> {
                                         onChanged: form.toggleRememberMe,
                                         onForgotPassword: () {},
                                       ),
-                                      const SizedBox(height: 32),
+                                      const SizedBox(height: 20),
+                                      // 隐私政策勾选
+                                      _buildAgreementCheckbox(
+                                        value: _agreedPrivacyPolicy,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _agreedPrivacyPolicy = value ?? false;
+                                          });
+                                        },
+                                        label: '隐私政策',
+                                        url: LegalUrls.privacyPolicy,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      // 用户协议勾选
+                                      _buildAgreementCheckbox(
+                                        value: _agreedUserAgreement,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _agreedUserAgreement = value ?? false;
+                                          });
+                                        },
+                                        label: '用户协议',
+                                        url: LegalUrls.userAgreement,
+                                      ),
+                                      const SizedBox(height: 24),
                                       PrimaryButton(
                                         label: form.isSubmitting ? '登陆中…' : '登陆',
                                         onPressed: form.isSubmitting
@@ -186,6 +231,15 @@ class _LoginPageState extends State<LoginPage> {
                                             : () async {
                                                 if (!_formKey.currentState!
                                                     .validate()) {
+                                                  return;
+                                                }
+                                                // 验证是否同意协议
+                                                if (!_agreedPrivacyPolicy || !_agreedUserAgreement) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text('请同意隐私政策和用户协议'),
+                                                    ),
+                                                  );
                                                   return;
                                                 }
                                                 FocusScope.of(context).unfocus();
@@ -266,6 +320,56 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
       ),
+    );
+  }
+
+  /// 构建协议勾选组件
+  Widget _buildAgreementCheckbox({
+    required bool value,
+    required ValueChanged<bool?> onChanged,
+    required String label,
+    required String url,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 24,
+          height: 24,
+          child: Checkbox(
+            value: value,
+            onChanged: onChanged,
+            activeColor: AppColors.brandGreen,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                '我已阅读并同意',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey[700],
+                ),
+              ),
+              GestureDetector(
+                onTap: () => _openUrl(url),
+                child: Text(
+                  '《$label》',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.brandGreen,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

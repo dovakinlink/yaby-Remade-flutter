@@ -762,7 +762,7 @@ class _YabaiAppState extends State<YabaiApp> {
           builder: (context, themeProvider, child) {
             return MaterialApp.router(
               debugShowCheckedModeBanner: false,
-              title: '智研云',
+              title: '友研',
               theme: AppTheme.lightTheme,
               darkTheme: AppTheme.darkTheme,
               themeMode: themeProvider.themeMode,

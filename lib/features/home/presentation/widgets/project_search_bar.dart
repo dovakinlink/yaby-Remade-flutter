@@ -5,6 +5,7 @@ import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/features/ai/data/repositories/ai_repository.dart';
 import 'package:yabai_app/features/ai/providers/ai_query_provider.dart';
 import 'package:yabai_app/features/ai/presentation/pages/ai_page.dart';
+import 'package:yabai_app/features/auth/providers/user_profile_provider.dart';
 
 /// 项目搜索栏组件 - 重构版
 /// 深色卡片样式，包含返回箭头、AI搜索开关胶囊、搜索按钮
@@ -265,6 +266,15 @@ class _ProjectSearchBarState extends State<ProjectSearchBar> {
 
   /// AI 搜索胶囊开关
   Widget _buildAiTogglePill(bool isDarkMode, {required bool compact}) {
+    // 检查是否为 CRC/CRA 用户
+    final userProfile = context.read<UserProfileProvider>().profile;
+    final isAiDisabled = userProfile?.isAiDisabled == true;
+
+    // CRC/CRA 用户显示禁用状态
+    if (isAiDisabled) {
+      return _buildDisabledAiTogglePill(isDarkMode, compact: compact);
+    }
+
     // 胶囊背景色
     final pillColor = _isAiMode
         ? AppColors.brandGreen.withValues(alpha: isDarkMode ? 0.2 : 0.15)
@@ -355,6 +365,92 @@ class _ProjectSearchBarState extends State<ProjectSearchBar> {
                 ],
               ),
             ),
+    );
+  }
+
+  /// CRC/CRA 用户禁用状态的 AI 搜索胶囊
+  Widget _buildDisabledAiTogglePill(bool isDarkMode, {required bool compact}) {
+    // 禁用状态的颜色
+    final pillColor = isDarkMode 
+        ? Colors.grey[800]!.withValues(alpha: 0.5) 
+        : Colors.grey[200]!.withValues(alpha: 0.7);
+    final borderColor = isDarkMode 
+        ? Colors.grey[700]!.withValues(alpha: 0.3) 
+        : Colors.grey[300]!.withValues(alpha: 0.5);
+    final textIconColor = isDarkMode ? Colors.grey[600] : Colors.grey[400];
+    final trackColor = isDarkMode ? Colors.grey[700] : Colors.grey[300];
+
+    return GestureDetector(
+      onTap: () {
+        // 点击时显示提示
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('当前角色暂不支持使用AI功能'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      },
+      child: Opacity(
+        opacity: 0.6,
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 10 : 12,
+            vertical: compact ? 6 : 8,
+          ),
+          decoration: BoxDecoration(
+            color: pillColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: borderColor, width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 星星图标
+              Icon(
+                Icons.auto_awesome,
+                color: textIconColor,
+                size: compact ? 14 : 16,
+              ),
+              SizedBox(width: compact ? 4 : 6),
+              // AI 搜索文字
+              Text(
+                'AI 搜索',
+                style: TextStyle(
+                  color: textIconColor,
+                  fontSize: compact ? 12 : 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(width: compact ? 6 : 8),
+              // 开关指示器（始终关闭状态）
+              Container(
+                width: compact ? 32 : 36,
+                height: compact ? 18 : 20,
+                decoration: BoxDecoration(
+                  color: trackColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      left: 2,
+                      top: 2,
+                      child: Container(
+                        width: compact ? 14 : 16,
+                        height: compact ? 14 : 16,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

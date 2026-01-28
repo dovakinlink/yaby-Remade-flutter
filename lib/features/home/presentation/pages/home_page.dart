@@ -187,11 +187,38 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (index == _currentTab) {
       return;
     }
+    
+    // CRC/CRA 用户不允许访问 AI Tab (index=2)
+    if (index == 2) {
+      final userProfile = context.read<UserProfileProvider>().profile;
+      if (userProfile?.isAiDisabled == true) {
+        _showAiDisabledMessage();
+        return;
+      }
+    }
+    
     setState(() => _currentTab = index);
+  }
+
+  /// 显示 AI 功能禁用提示
+  void _showAiDisabledMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('当前角色暂不支持使用AI功能'),
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   /// 打开试验问答页面
   void _openXiaobaiChat() {
+    // CRC/CRA 用户不允许使用 AI 功能
+    final userProfile = context.read<UserProfileProvider>().profile;
+    if (userProfile?.isAiDisabled == true) {
+      _showAiDisabledMessage();
+      return;
+    }
+    
     final repository = context.read<AiRepository>();
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -208,6 +235,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final announcementsProvider = context.watch<HomeAnnouncementsProvider>();
     final statsProvider = context.watch<ProjectStatisticsProvider>();
+    final userProfile = context.watch<UserProfileProvider>().profile;
+    final isAiDisabled = userProfile?.isAiDisabled == true;
 
     return Scaffold(
       backgroundColor: isDark
@@ -230,21 +259,27 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   heroTag: "create_post",
               child: const Icon(Icons.add, color: Colors.white, size: 28),
                 ),
-                const SizedBox(height: 16),
-                FloatingActionButton(
+                // CRC/CRA 用户不显示临床问答浮动按钮
+                if (!isAiDisabled) ...[
+                  const SizedBox(height: 16),
+                  FloatingActionButton(
+                    onPressed: _openXiaobaiChat,
+                    backgroundColor: AppColors.brandGreen,
+                    heroTag: "clinical_qa",
+                    child: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 28),
+                  ),
+                ],
+              ],
+            )
+          // CRC/CRA 用户在非首页 tab 不显示临床问答浮动按钮
+          : isAiDisabled
+              ? null
+              : FloatingActionButton(
                   onPressed: _openXiaobaiChat,
                   backgroundColor: AppColors.brandGreen,
                   heroTag: "clinical_qa",
                   child: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 28),
                 ),
-              ],
-            )
-          : FloatingActionButton(
-              onPressed: _openXiaobaiChat,
-              backgroundColor: AppColors.brandGreen,
-              heroTag: "clinical_qa",
-              child: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 28),
-            ),
       body: _buildTabStack(
         isDark: isDark,
         announcementsProvider: announcementsProvider,

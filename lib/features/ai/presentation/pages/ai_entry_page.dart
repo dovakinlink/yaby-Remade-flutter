@@ -9,6 +9,7 @@ import 'package:yabai_app/features/ai/providers/xiaobai_session_list_provider.da
 import 'package:yabai_app/features/ai/presentation/pages/ai_page.dart';
 import 'package:yabai_app/features/ai/presentation/pages/ai_session_list_page.dart';
 import 'package:yabai_app/features/ai/presentation/pages/xiaobai_session_list_page.dart';
+import 'package:yabai_app/features/auth/providers/user_profile_provider.dart';
 
 class AiEntryPage extends StatefulWidget {
   const AiEntryPage({super.key});
@@ -47,6 +48,8 @@ class _AiEntryPageState extends State<AiEntryPage> with TickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final userProfile = context.watch<UserProfileProvider>().profile;
+    final isAiDisabled = userProfile?.isAiDisabled == true;
 
     return Container(
       decoration: BoxDecoration(
@@ -69,21 +72,69 @@ class _AiEntryPageState extends State<AiEntryPage> with TickerProviderStateMixin
         children: [
           _buildModernHeader(isDark),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 20),
-                    _buildModernFeatureCards(context, isDark),
-                  ],
-                ),
-              ),
-            ),
+            child: isAiDisabled
+                ? _buildAiDisabledContent(isDark)
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SizedBox(height: 20),
+                          _buildModernFeatureCards(context, isDark),
+                        ],
+                      ),
+                    ),
+                  ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// AI 禁用用户显示的提示内容
+  Widget _buildAiDisabledContent(bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.grey[800]!.withOpacity(0.5)
+                    : Colors.grey[100],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.block_outlined,
+                size: 64,
+                color: isDark ? Colors.grey[400] : Colors.grey[500],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'AI 功能暂不可用',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '当前角色暂不支持使用AI功能',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

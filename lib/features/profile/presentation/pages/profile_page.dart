@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:yabai_app/core/constants/legal_urls.dart';
 import 'package:yabai_app/core/network/api_client.dart';
 import 'package:yabai_app/core/theme/app_theme.dart';
 import 'package:yabai_app/core/widgets/animated_medical_background.dart';
@@ -36,6 +38,7 @@ class _ProfilePageState extends State<ProfilePage>
   late ScrollController _scrollController;
   bool _isLoggingOut = false;
   bool _isCheckingUpdate = false;
+  bool _isDeletingAccount = false;
 
   @override
   void initState() {
@@ -379,6 +382,26 @@ class _ProfilePageState extends State<ProfilePage>
         ),
         const SizedBox(height: 16),
         _buildSettingsItem(
+          icon: Icons.privacy_tip_outlined,
+          iconColor: AppColors.brandGreen,
+          iconBackground: AppColors.brandGreen.withValues(alpha: 0.12),
+          title: '隐私政策',
+          subtitle: '查看隐私政策详情',
+          onTap: () => _openUrl(LegalUrls.privacyPolicy),
+          isDark: isDark,
+        ),
+        const SizedBox(height: 16),
+        _buildSettingsItem(
+          icon: Icons.description_outlined,
+          iconColor: AppColors.brandGreen,
+          iconBackground: AppColors.brandGreen.withValues(alpha: 0.12),
+          title: '用户协议',
+          subtitle: '查看用户协议详情',
+          onTap: () => _openUrl(LegalUrls.userAgreement),
+          isDark: isDark,
+        ),
+        const SizedBox(height: 16),
+        _buildSettingsItem(
           icon: Icons.logout_rounded,
           iconColor: Colors.redAccent,
           iconBackground: Colors.redAccent.withValues(alpha: 0.12),
@@ -388,6 +411,18 @@ class _ProfilePageState extends State<ProfilePage>
           isDark: isDark,
           isDestructive: true,
           showLoader: _isLoggingOut,
+        ),
+        const SizedBox(height: 16),
+        _buildSettingsItem(
+          icon: Icons.person_off_rounded,
+          iconColor: Colors.redAccent,
+          iconBackground: Colors.redAccent.withValues(alpha: 0.12),
+          title: '注销账号',
+          subtitle: '永久删除账号及所有数据',
+          onTap: _confirmDeleteAccount,
+          isDark: isDark,
+          isDestructive: true,
+          showLoader: _isDeletingAccount,
         ),
         SizedBox(height: MediaQuery.of(context).padding.bottom + 32),
       ],
@@ -471,6 +506,21 @@ class _ProfilePageState extends State<ProfilePage>
         ),
       ),
     );
+  }
+
+  /// 打开URL
+  Future<void> _openUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('打开URL失败: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('无法打开链接')),
+        );
+      }
+    }
   }
 
   Future<void> _openChangePasswordSheet() async {
@@ -596,6 +646,74 @@ class _ProfilePageState extends State<ProfilePage>
       if (mounted) {
         setState(() {
           _isLoggingOut = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteAccount() async {
+    if (_isDeletingAccount) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('注销账号'),
+        content: const Text('注销后账号及所有数据将被永久删除，此操作不可恢复。确定要注销账号吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(
+              '确认注销',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _performDeleteAccount();
+    }
+  }
+
+  Future<void> _performDeleteAccount() async {
+    setState(() {
+      _isDeletingAccount = true;
+    });
+
+    final authSession = context.read<AuthSessionProvider>();
+    final userProfile = context.read<UserProfileProvider>();
+    final myPosts = context.read<MyPostsProvider>();
+
+    try {
+      // 清除认证信息
+      await authSession.clear();
+      await userProfile.clear();
+      myPosts.clear();
+
+      // 清除 IM 相关数据
+      await _clearImData();
+
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('账号已注销')),
+      );
+      
+      context.go(LoginPage.routePath);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('注销账号失败，请稍后重试')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDeletingAccount = false;
         });
       }
     }

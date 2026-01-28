@@ -40,7 +40,7 @@ class AppLogo extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 20),
-        Text('智研云临床试验', style: effectiveStyle),
+        Text('友研', style: effectiveStyle),
       ],
     );
   }

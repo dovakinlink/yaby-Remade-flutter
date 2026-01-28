@@ -113,6 +113,15 @@ class UserProfile {
   String? get primaryRoleName =>
       roleName?.isNotEmpty == true ? roleName : systemRoleName;
 
+  /// 判断是否为CRC角色
+  bool get isCRC => roleCode == 'CRC' || roleName == '临床研究协调员';
+
+  /// 判断是否为CRA角色
+  bool get isCRA => roleCode == 'CRA' || roleName == '临床监察员';
+
+  /// 判断是否禁用AI功能（CRC和CRA角色不允许使用AI）
+  bool get isAiDisabled => isCRC || isCRA;
+
   static int _parseRequiredInt(dynamic value, {int fallback = 0}) {
     return _parseNullableInt(value) ?? fallback;
   }

@@ -1,4 +1,4 @@
-# 智研云 Flutter 应用
+# 友研 Flutter 应用
 
 临床试验管理系统移动端应用，支持 iOS 和 Android 平台。
 
