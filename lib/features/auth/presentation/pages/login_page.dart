@@ -14,6 +14,7 @@ import 'package:yabai_app/core/widgets/labeled_text_field.dart';
 import 'package:yabai_app/core/widgets/primary_button.dart';
 import 'package:yabai_app/features/auth/providers/login_form_provider.dart';
 import 'package:yabai_app/features/auth/presentation/widgets/remember_me_row.dart';
+import 'package:yabai_app/features/auth/presentation/pages/register_page.dart';
 import 'package:yabai_app/features/home/presentation/pages/home_page.dart';
 import 'package:yabai_app/features/im/providers/websocket_provider.dart';
 
@@ -302,8 +303,31 @@ class _LoginPageState extends State<LoginPage> {
                                                 );
                                               },
                                       ),
-                                      const SizedBox(height: 28),
-                                      const Divider(),
+                                      const SizedBox(height: 20),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            '还没有账号？',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey[700],
+                                            ),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              context.go(RegisterPage.routePath);
+                                            },
+                                            child: const Text(
+                                              '立即注册',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ],
                                   ),
                                 ),

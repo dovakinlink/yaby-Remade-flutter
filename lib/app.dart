@@ -13,6 +13,7 @@ import 'package:yabai_app/features/auth/providers/auth_session_provider.dart';
 import 'package:yabai_app/features/auth/providers/login_form_provider.dart';
 import 'package:yabai_app/features/auth/providers/user_profile_provider.dart';
 import 'package:yabai_app/features/auth/presentation/pages/login_page.dart';
+import 'package:yabai_app/features/auth/presentation/pages/register_page.dart';
 import 'package:yabai_app/features/app_update/data/services/app_update_service.dart';
 import 'package:yabai_app/features/app_update/presentation/widgets/app_update_dialog.dart';
 import 'package:yabai_app/features/home/data/models/announcement_model.dart';
@@ -105,6 +106,11 @@ class _YabaiAppState extends State<YabaiApp> {
           path: LoginPage.routePath,
           name: LoginPage.routeName,
           builder: (context, state) => const LoginPage(),
+        ),
+        GoRoute(
+          path: RegisterPage.routePath,
+          name: RegisterPage.routeName,
+          builder: (context, state) => const RegisterPage(),
         ),
         GoRoute(
           path: HomePage.routePath,
